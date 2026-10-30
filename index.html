@@ -13,10 +13,17 @@
     .btn { background: #2563eb; color: white; border: none; padding: 12px 16px; border-radius: 10px; font-size: 0.95rem; font-weight: 600; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px; }
     .btn:active { background: #1d4ed8; }
     .folder-card { background: #16181e; border: 1px solid #2a2d34; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
-    .folder-header { display: flex; align-items: center; justify-content: space-between; font-weight: 600; font-size: 1.1rem; color: #fff; }
+    .folder-header { display: flex; align-items: center; justify-content: space-between; font-weight: 600; font-size: 1.1rem; color: #fff; cursor: pointer; }
+    .folder-title { display: flex; align-items: center; gap: 8px; flex-grow: 1; }
+    .folder-content { display: none; margin-top: 12px; border-top: 1px solid #2a2d34; padding-top: 10px; }
+    .folder-content.aperta { display: block; }
+    
     .subfolder-container { margin-left: 12px; margin-top: 10px; border-left: 2px solid #2a2d34; padding-left: 12px; }
-    .subfolder-header { display: flex; align-items: center; justify-content: space-between; font-size: 0.95rem; font-weight: 600; color: #93c5fd; margin-top: 8px; }
-    .file-list { margin-top: 8px; padding-left: 8px; }
+    .subfolder-header { display: flex; align-items: center; justify-content: space-between; font-size: 0.95rem; font-weight: 600; color: #93c5fd; margin-top: 8px; cursor: pointer; }
+    .subfolder-content { display: none; margin-top: 6px; padding-left: 6px; }
+    .subfolder-content.aperta { display: block; }
+
+    .file-list { margin-top: 8px; }
     .file-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; font-size: 0.85rem; color: #c9d1d9; }
     .file-name { cursor: pointer; color: #60a5fa; text-decoration: underline; flex-grow: 1; margin-right: 8px; word-break: break-all; }
     .file-actions { display: flex; align-items: center; gap: 6px; }
@@ -30,7 +37,7 @@
     .empty { color: #6b7280; font-size: 0.8rem; font-style: italic; margin-top: 4px; }
     input[type="file"] { display: none; }
     
-    /* Finestra modale per anteprima foto */
+    /* Finestra modale anteprima */
     #modalAnteprima { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; flex-direction: column; padding: 20px; }
     #modalAnteprima img { max-width: 100%; max-height: 80vh; border-radius: 8px; }
     #modalAnteprima button { margin-top: 20px; background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
@@ -49,7 +56,6 @@
 
   <div id="listaCantieri"></div>
 
-  <!-- Finestra per vedere le foto -->
   <div id="modalAnteprima" onclick="chiudiAnteprima()">
     <img id="imgVisualizzata" src="" alt="Anteprima">
     <button onclick="chiudiAnteprima()">Chiudi</button>
@@ -58,22 +64,36 @@
   <script>
     const PASSWORD_ELIMINAZIONE = "1234";
 
-    let db = JSON.parse(localStorage.getItem('doc_cantiere_db_v3')) || [];
+    let db = JSON.parse(localStorage.getItem('doc_cantiere_db_v4')) || [];
+    let cartelleAperte = JSON.parse(localStorage.getItem('doc_cantiere_stati_v4')) || {};
     let targetCaricamento = null;
 
     function salvaDB() {
       try {
-        localStorage.setItem('doc_cantiere_db_v3', JSON.stringify(db));
+        localStorage.setItem('doc_cantiere_db_v4', JSON.stringify(db));
         mostraCantieri();
       } catch (e) {
-        alert("⚠️ Memoria del telefono quasi piena! Impossibile salvare file troppo grandi.");
+        alert("⚠️ Memoria quasi piena!");
       }
+    }
+
+    function salvaStati() {
+      localStorage.setItem('doc_cantiere_stati_v4', JSON.stringify(cartelleAperte));
+    }
+
+    function toggleCartella(id) {
+      cartelleAperte[id] = !cartelleAperte[id];
+      salvaStati();
+      mostraCantieri();
     }
 
     function nuovoCantiere() {
       let nome = prompt("Nome del nuovo cantiere:");
       if (nome && nome.trim() !== "") {
-        db.push({ id: Date.now(), nome: nome.trim(), sottocartelle: [], file: [] });
+        let id = Date.now();
+        db.push({ id: id, nome: nome.trim(), sottocartelle: [], file: [] });
+        cartelleAperte[id] = true;
+        salvaStati();
         salvaDB();
       }
     }
@@ -96,7 +116,10 @@
       if (nome && nome.trim() !== "") {
         let cantiere = db.find(c => c.id === cantiereId);
         if (cantiere) {
-          cantiere.sottocartelle.push({ id: Date.now(), nome: nome.trim(), file: [] });
+          let subId = Date.now();
+          cantiere.sottocartelle.push({ id: subId, nome: nome.trim(), file: [] });
+          cartelleAperte[subId] = true;
+          salvaStati();
           salvaDB();
         }
       }
@@ -167,8 +190,7 @@
 
       let reader = new FileReader();
       reader.onload = function(event) {
-        let fileDataUrl = event.target.result; // Salva il contenuto reale del file
-
+        let fileDataUrl = event.target.result;
         let cantiere = db.find(c => c.id === targetCaricamento.cantiereId);
         if (cantiere) {
           let nuovoFileObj = { id: Date.now(), nome: f.name, tipo: tipo, dati: fileDataUrl };
@@ -178,8 +200,11 @@
           } else {
             cantiere.file.push(nuovoFileObj);
           }
+          cartelleAperte[targetCaricamento.cantiereId] = true;
+          if (targetCaricamento.subId) cartelleAperte[targetCaricamento.subId] = true;
+          salvaStati();
           salvaDB();
-          alert("File caricato e aperto con successo!");
+          alert("File caricato con successo!");
         }
         e.target.value = '';
         targetCaricamento = null;
@@ -187,16 +212,15 @@
       reader.readAsDataURL(f);
     }
 
-    function apriFile(dati, tipo, nome) {
+    function apriFile(dati, tipo) {
       if (!dati) {
-        alert("Impossibile aprire questo file (salvato senza dati). Ricaricalo.");
+        alert("Impossibile aprire questo file. Ricaricalo.");
         return;
       }
       if (tipo === 'img') {
         document.getElementById('imgVisualizzata').src = dati;
         document.getElementById('modalAnteprima').style.display = 'flex';
       } else {
-        // Per PDF, Excel e Word apre il documento in una nuova scheda del browser
         let w = window.open('');
         w.document.write(`<iframe src="${dati}" frameborder="0" style="border:0; top:0; left:0; bottom:0; right:0; width:100%; height:100%;" allowfullscreen></iframe>`);
       }
@@ -215,52 +239,67 @@
       }
 
       db.forEach(c => {
+        let cantiereAperto = cartelleAperte[c.id] ? 'aperta' : '';
+        let frecciaCantiere = cartelleAperte[c.id] ? '▼' : '▶';
+
         let html = `
           <div class="folder-card">
             <div class="folder-header">
-              <span>📁 ${c.nome}</span>
+              <div class="folder-title" onclick="toggleCartella(${c.id})">
+                <span>${frecciaCantiere} 📁</span> <span>${c.nome}</span>
+              </div>
               <button class="btn-delete" onclick="eliminaCantiere(${c.id})" title="Elimina cantiere">🗑️</button>
             </div>
             
-            <button class="btn btn-sub" onclick="nuovaSottocartella(${c.id})">📂 + Aggiungi Sottocartella</button>
-            <button class="btn btn-sub" style="background:#059669;" onclick="preparaCaricamento(${c.id})">📄 + Carica qui</button>
+            <div class="folder-content ${cantiereAperto}">
+              <button class="btn btn-sub" onclick="nuovaSottocartella(${c.id})">📂 + Aggiungi Sottocartella</button>
+              <button class="btn btn-sub" style="background:#059669;" onclick="preparaCaricamento(${c.id})">📄 + Carica qui</button>
 
-            <!-- File diretti del cantiere -->
-            <div class="file-list">
-              ${c.file.map(f => `
-                <div class="file-item">
-                  <span class="file-name" onclick="apriFile('${f.dati}', '${f.tipo}', '${f.nome}')">📄 ${f.nome}</span>
-                  <div class="file-actions">
-                    <span class="file-badge ${f.tipo}">${f.tipo}</span>
-                    <button class="btn-delete" onclick="eliminaFile(${c.id}, ${f.id})">🗑️</button>
+              <!-- File diretti del cantiere -->
+              <div class="file-list">
+                ${c.file.map(f => `
+                  <div class="file-item">
+                    <span class="file-name" onclick="apriFile('${f.dati}', '${f.tipo}')">📄 ${f.nome}</span>
+                    <div class="file-actions">
+                      <span class="file-badge ${f.tipo}">${f.tipo}</span>
+                      <button class="btn-delete" onclick="eliminaFile(${c.id}, ${f.id})">🗑️</button>
+                    </div>
                   </div>
-                </div>
-              `).join('')}
-            </div>
+                `).join('')}
+              </div>
 
-            <!-- Sottocartelle -->
-            <div class="subfolder-container">
-              ${c.sottocartelle.map(s => `
-                <div class="subfolder-header">
-                  <span>📂 ${s.nome}</span>
-                  <div class="file-actions">
-                    <button class="btn btn-sub" style="padding:2px 6px; font-size:0.7rem;" onclick="preparaCaricamento(${c.id}, ${s.id})">+ File</button>
-                    <button class="btn-delete" onclick="eliminaSottocartella(${c.id}, ${s.id})">🗑️</button>
-                  </div>
-                </div>
-                <div class="file-list">
-                  ${s.file.length === 0 ? '<div class="empty">Nessun file</div>' : ''}
-                  ${s.file.map(f => `
-                    <div class="file-item">
-                      <span class="file-name" onclick="apriFile('${f.dati}', '${f.tipo}', '${f.nome}')">📄 ${f.nome}</span>
-                      <div class="file-actions">
-                        <span class="file-badge ${f.tipo}">${f.tipo}</span>
-                        <button class="btn-delete" onclick="eliminaFile(${c.id}, ${f.id}, ${s.id})">🗑️</button>
+              <!-- Sottocartelle -->
+              <div class="subfolder-container">
+                ${c.sottocartelle.map(s => {
+                  let subAperta = cartelleAperte[s.id] ? 'aperta' : '';
+                  let frecciaSub = cartelleAperte[s.id] ? '▼' : '▶';
+                  return `
+                    <div>
+                      <div class="subfolder-header">
+                        <span onclick="toggleCartella(${s.id})">${frecciaSub} 📂 ${s.nome}</span>
+                        <div class="file-actions">
+                          <button class="btn btn-sub" style="padding:2px 6px; font-size:0.7rem;" onclick="preparaCaricamento(${c.id}, ${s.id})">+ File</button>
+                          <button class="btn-delete" onclick="eliminaSottocartella(${c.id}, ${s.id})">🗑️</button>
+                        </div>
+                      </div>
+                      <div class="subfolder-content ${subAperta}">
+                        <div class="file-list">
+                          ${s.file.length === 0 ? '<div class="empty">Nessun file</div>' : ''}
+                          ${s.file.map(f => `
+                            <div class="file-item">
+                              <span class="file-name" onclick="apriFile('${f.dati}', '${f.tipo}')">📄 ${f.nome}</span>
+                              <div class="file-actions">
+                                <span class="file-badge ${f.tipo}">${f.tipo}</span>
+                                <button class="btn-delete" onclick="eliminaFile(${c.id}, ${f.id}, ${s.id})">🗑️</button>
+                              </div>
+                            </div>
+                          `).join('')}
+                        </div>
                       </div>
                     </div>
-                  `).join('')}
-                </div>
-              `).join('')}
+                  `;
+                }).join('')}
+              </div>
             </div>
 
           </div>
