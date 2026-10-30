@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DocCantiere</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #0d0e12; color: #f0f2f5; padding: 16px; padding-bottom: 80px; }
+    header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 16px; border-bottom: 1px solid #2a2d34; margin-bottom: 20px; }
+    h1 { font-size: 1.4rem; color: #fff; font-weight: 700; }
+    .badge { background: #2563eb; color: #fff; font-size: 0.75rem; padding: 4px 8px; border-radius: 12px; font-weight: 600; }
+    .btn { background: #2563eb; color: white; border: none; padding: 12px 16px; border-radius: 10px; font-size: 0.95rem; font-weight: 600; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; }
+    .btn:active { background: #1d4ed8; }
+    .folder-card { background: #16181e; border: 1px solid #2a2d34; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+    .folder-header { display: flex; align-items: center; justify-content: space-between; font-weight: 600; font-size: 1.1rem; color: #fff; }
+    .folder-icon { color: #f59e0b; margin-right: 8px; }
+    .file-list { margin-top: 12px; border-top: 1px solid #2a2d34; padding-top: 10px; }
+    .file-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; font-size: 0.9rem; color: #c9d1d9; }
+    .file-badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: 700; }
+    .pdf { background: #7f1d1d; color: #fca5a5; }
+    .doc { background: #1e3a8a; color: #bfdbfe; }
+    .xls { background: #14532d; color: #bbf7d0; }
+    .img { background: #581c87; color: #e9d5ff; }
+    .empty { color: #6b7280; font-size: 0.85rem; font-style: italic; margin-top: 8px; }
+    input[type="file"] { display: none; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🏗️ DocCantiere</h1>
+    <span class="badge">Offline Standalone</span>
+  </header>
+
+  <button class="btn" onclick="nuovoCantiere()">➕ Nuovo Cantiere / Cartella</button>
+  <button class="btn" style="background:#059669;" onclick="document.getElementById('fileInput').click()">📷 Importa Foto / Documento</button>
+  <input type="file" id="fileInput" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" onchange="caricaFile(event)">
+
+  <div id="listaCantieri"></div>
+
+  <script>
+    let db = JSON.parse(localStorage.getItem('doc_cantiere_db')) || [
+      { id: 1, nome: "Cantiere Via Roma 12", file: [{ nome: "Progetto_Esecutivo.pdf", tipo: "pdf" }, { nome: "Computo_Metrico.xlsx", tipo: "xls" }] },
+      { id: 2, nome: "Ristrutturazione P.zza Dante", file: [{ nome: "Foto_Inizio_Lavori.jpg", tipo: "img" }] }
+    ];
+
+    function salvaDB() {
+      localStorage.setItem('doc_cantiere_db', JSON.stringify(db));
+      mostraCantieri();
+    }
+
+    function nuovoCantiere() {
+      let nome = prompt("Nome del nuovo cantiere:");
+      if (nome) {
+        db.push({ id: Date.now(), nome: nome, file: [] });
+        salvaDB();
+      }
+    }
+
+    function caricaFile(e) {
+      if (!e.target.files.length) return;
+      let f = e.target.files[0];
+      let ext = f.name.split('.').pop().toLowerCase();
+      let tipo = 'doc';
+      if (['jpg', 'jpeg', 'png'].includes(ext)) tipo = 'img';
+      if (ext === 'pdf') tipo = 'pdf';
+      if (['xls', 'xlsx'].includes(ext)) tipo = 'xls';
+
+      if (db.length === 0) {
+        alert("Crea prima un cantiere!");
+        return;
+      }
+      db[0].file.push({ nome: f.name, tipo: tipo });
+      salvaDB();
+      alert("File aggiunto a " + db[0].nome);
+    }
+
+    function mostraCantieri() {
+      let container = document.getElementById('listaCantieri');
+      container.innerHTML = '';
+      db.forEach(c => {
+        let html = `
+          <div class="folder-card">
+            <div class="folder-header">
+              <span><span class="folder-icon">📁</span> ${c.nome}</span>
+            </div>
+            <div class="file-list">
+              ${c.file.length === 0 ? '<div class="empty">Nessun documento caricato</div>' : ''}
+              ${c.file.map(f => `
+                <div class="file-item">
+                  <span>📄 ${f.nome}</span>
+                  <span class="file-badge ${f.tipo}">${f.tipo}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+        container.innerHTML += html;
+      });
+    }
+
+    mostraCantieri();
+  </script>
+</body>
+</html>
