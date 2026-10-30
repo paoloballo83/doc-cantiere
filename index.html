@@ -10,19 +10,23 @@
     header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 16px; border-bottom: 1px solid #2a2d34; margin-bottom: 20px; }
     h1 { font-size: 1.4rem; color: #fff; font-weight: 700; }
     .badge { background: #2563eb; color: #fff; font-size: 0.75rem; padding: 4px 8px; border-radius: 12px; font-weight: 600; }
-    .btn { background: #2563eb; color: white; border: none; padding: 12px 16px; border-radius: 10px; font-size: 0.95rem; font-weight: 600; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; }
+    .btn { background: #2563eb; color: white; border: none; padding: 12px 16px; border-radius: 10px; font-size: 0.95rem; font-weight: 600; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px; }
     .btn:active { background: #1d4ed8; }
-    .folder-card { background: #16181e; border: 1px solid #2a2d34; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+    .folder-card { background: #16181e; border: 1px solid #2a2d34; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
     .folder-header { display: flex; align-items: center; justify-content: space-between; font-weight: 600; font-size: 1.1rem; color: #fff; }
-    .folder-icon { color: #f59e0b; margin-right: 8px; }
-    .file-list { margin-top: 12px; border-top: 1px solid #2a2d34; padding-top: 10px; }
-    .file-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; font-size: 0.9rem; color: #c9d1d9; }
-    .file-badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: 700; }
+    .subfolder-container { margin-left: 12px; margin-top: 10px; border-left: 2px solid #2a2d34; padding-left: 12px; }
+    .subfolder-header { display: flex; align-items: center; justify-content: space-between; font-size: 0.95rem; font-weight: 600; color: #93c5fd; margin-top: 8px; }
+    .file-list { margin-top: 8px; padding-left: 8px; }
+    .file-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; font-size: 0.85rem; color: #c9d1d9; }
+    .file-actions { display: flex; align-items: center; gap: 6px; }
+    .file-badge { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: 700; }
     .pdf { background: #7f1d1d; color: #fca5a5; }
     .doc { background: #1e3a8a; color: #bfdbfe; }
     .xls { background: #14532d; color: #bbf7d0; }
     .img { background: #581c87; color: #e9d5ff; }
-    .empty { color: #6b7280; font-size: 0.85rem; font-style: italic; margin-top: 8px; }
+    .btn-delete { background: none; border: none; color: #ef4444; font-size: 0.9rem; cursor: pointer; padding: 2px 4px; }
+    .btn-sub { background: #374151; font-size: 0.8rem; padding: 6px 10px; width: auto; margin-top: 6px; }
+    .empty { color: #6b7280; font-size: 0.8rem; font-style: italic; margin-top: 4px; }
     input[type="file"] { display: none; }
   </style>
 </head>
@@ -30,36 +34,125 @@
 
   <header>
     <h1>🏗️ DocCantiere</h1>
-    <span class="badge">Offline Standalone</span>
+    <span class="badge">Offline Pro</span>
   </header>
 
-  <button class="btn" onclick="nuovoCantiere()">➕ Nuovo Cantiere / Cartella</button>
-  <button class="btn" style="background:#059669;" onclick="document.getElementById('fileInput').click()">📷 Importa Foto / Documento</button>
+  <button class="btn" onclick="nuovoCantiere()">➕ Nuovo Cantiere</button>
+  <button class="btn" style="background:#059669;" onclick="preparaCaricamentoGenerico()">📷 Importa File / Condividi</button>
   <input type="file" id="fileInput" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" onchange="caricaFile(event)">
 
   <div id="listaCantieri"></div>
 
   <script>
-    let db = JSON.parse(localStorage.getItem('doc_cantiere_db')) || [
-      { id: 1, nome: "Cantiere Via Roma 12", file: [{ nome: "Progetto_Esecutivo.pdf", tipo: "pdf" }, { nome: "Computo_Metrico.xlsx", tipo: "xls" }] },
-      { id: 2, nome: "Ristrutturazione P.zza Dante", file: [{ nome: "Foto_Inizio_Lavori.jpg", tipo: "img" }] }
+    const PASSWORD_ELIMINAZIONE = "1234";
+
+    let db = JSON.parse(localStorage.getItem('doc_cantiere_db_v2')) || [
+      { 
+        id: 1, 
+        nome: "Cantiere Via Roma 12", 
+        sottocartelle: [
+          { id: 11, nome: "Progetti", file: [{ id: 101, nome: "Progetto_Esecutivo.pdf", tipo: "pdf" }] },
+          { id: 12, nome: "Contabilità", file: [{ id: 102, nome: "Computo.xlsx", tipo: "xls" }] }
+        ],
+        file: [] 
+      }
     ];
 
+    let targetCaricamento = null; // { cantiereId, sottocartellaId (opzionale) }
+
     function salvaDB() {
-      localStorage.setItem('doc_cantiere_db', JSON.stringify(db));
+      localStorage.setItem('doc_cantiere_db_v2', JSON.stringify(db));
       mostraCantieri();
     }
 
     function nuovoCantiere() {
       let nome = prompt("Nome del nuovo cantiere:");
-      if (nome) {
-        db.push({ id: Date.now(), nome: nome, file: [] });
+      if (nome && nome.trim() !== "") {
+        db.push({ id: Date.now(), nome: nome.trim(), sottocartelle: [], file: [] });
         salvaDB();
       }
     }
 
+    function eliminaCantiere(id) {
+      let cantiere = db.find(c => c.id === id);
+      if (!cantiere) return;
+      if (!confirm(`⚠️ Vuoi eliminare il cantiere "${cantiere.nome}"?`)) return;
+      let pwd = prompt("🔒 Inserisci la password per confermare:");
+      if (pwd !== PASSWORD_ELIMINAZIONE) {
+        alert("❌ Password errata.");
+        return;
+      }
+      db = db.filter(c => c.id !== id);
+      salvaDB();
+    }
+
+    function nuovaSottocartella(cantiereId) {
+      let nome = prompt("Nome della sottocartella (es. Fatture, Sicurezza, Permessi):");
+      if (nome && nome.trim() !== "") {
+        let cantiere = db.find(c => c.id === cantiereId);
+        if (cantiere) {
+          cantiere.sottocartelle.push({ id: Date.now(), nome: nome.trim(), file: [] });
+          salvaDB();
+        }
+      }
+    }
+
+    function eliminaSottocartella(cantiereId, subId) {
+      if (!confirm("Vuoi eliminare questa sottocartella e i suoi file?")) return;
+      let cantiere = db.find(c => c.id === cantiereId);
+      if (cantiere) {
+        cantiere.sottocartelle = cantiere.sottocartelle.filter(s => s.id !== subId);
+        salvaDB();
+      }
+    }
+
+    function eliminaFile(cantiereId, fileId, subId = null) {
+      let cantiere = db.find(c => c.id === cantiereId);
+      if (!cantiere) return;
+      if (subId) {
+        let sub = cantiere.sottocartelle.find(s => s.id === subId);
+        if (sub) sub.file = sub.file.filter(f => f.id !== fileId);
+      } else {
+        cantiere.file = cantiere.file.filter(f => f.id !== fileId);
+      }
+      salvaDB();
+    }
+
+    function preparaCaricamento(cantiereId, subId = null) {
+      targetCaricamento = { cantiereId, subId };
+      document.getElementById('fileInput').click();
+    }
+
+    function preparaCaricamentoGenerico() {
+      if (db.length === 0) {
+        alert("Crea prima un cantiere!");
+        return;
+      }
+      let opzioni = [];
+      let riferimenti = [];
+
+      db.forEach(c => {
+        opzioni.push(`📁 Cantiere: ${c.nome}`);
+        riferimenti.push({ cantiereId: c.id, subId: null });
+        c.sottocartelle.forEach(s => {
+          opzioni.push(`   📂 ${c.nome} ➔ ${s.nome}`);
+          riferimenti.push({ cantiereId: c.id, subId: s.id });
+        });
+      });
+
+      let testoScelta = "Scegli dove salvare il file:\n\n" + opzioni.map((o, i) => `${i + 1}. ${o}`).join("\n");
+      let scelta = prompt(testoScelta);
+      let indice = parseInt(scelta) - 1;
+
+      if (!isNaN(indice) && riferimenti[indice]) {
+        preparaCaricamento(riferimenti[indice].cantiereId, riferimenti[indice].subId);
+      } else if (scelta !== null) {
+        alert("Scelta non valida.");
+      }
+    }
+
     function caricaFile(e) {
-      if (!e.target.files.length) return;
+      if (!e.target.files.length || !targetCaricamento) return;
       let f = e.target.files[0];
       let ext = f.name.split('.').pop().toLowerCase();
       let tipo = 'doc';
@@ -67,33 +160,79 @@
       if (ext === 'pdf') tipo = 'pdf';
       if (['xls', 'xlsx'].includes(ext)) tipo = 'xls';
 
-      if (db.length === 0) {
-        alert("Crea prima un cantiere!");
-        return;
+      let cantiere = db.find(c => c.id === targetCaricamento.cantiereId);
+      if (cantiere) {
+        let nuovoFileObj = { id: Date.now(), nome: f.name, tipo: tipo };
+        if (targetCaricamento.subId) {
+          let sub = cantiere.sottocartelle.find(s => s.id === targetCaricamento.subId);
+          if (sub) sub.file.push(nuovoFileObj);
+        } else {
+          cantiere.file.push(nuovoFileObj);
+        }
+        salvaDB();
+        alert("File caricato con successo!");
       }
-      db[0].file.push({ nome: f.name, tipo: tipo });
-      salvaDB();
-      alert("File aggiunto a " + db[0].nome);
+      e.target.value = '';
+      targetCaricamento = null;
     }
 
     function mostraCantieri() {
       let container = document.getElementById('listaCantieri');
       container.innerHTML = '';
+      if (db.length === 0) {
+        container.innerHTML = '<div class="empty" style="text-align:center; padding: 20px;">Nessun cantiere presente.</div>';
+        return;
+      }
+
       db.forEach(c => {
         let html = `
           <div class="folder-card">
             <div class="folder-header">
-              <span><span class="folder-icon">📁</span> ${c.nome}</span>
+              <span>📁 ${c.nome}</span>
+              <button class="btn-delete" onclick="eliminaCantiere(${c.id})" title="Elimina cantiere">🗑️</button>
             </div>
+            
+            <button class="btn btn-sub" onclick="nuovaSottocartella(${c.id})">📂 + Aggiungi Sottocartella</button>
+            <button class="btn btn-sub" style="background:#059669;" onclick="preparaCaricamento(${c.id})">📄 + Carica qui</button>
+
+            <!-- File diretti del cantiere -->
             <div class="file-list">
-              ${c.file.length === 0 ? '<div class="empty">Nessun documento caricato</div>' : ''}
               ${c.file.map(f => `
                 <div class="file-item">
                   <span>📄 ${f.nome}</span>
-                  <span class="file-badge ${f.tipo}">${f.tipo}</span>
+                  <div class="file-actions">
+                    <span class="file-badge ${f.tipo}">${f.tipo}</span>
+                    <button class="btn-delete" onclick="eliminaFile(${c.id}, ${f.id})">🗑️</button>
+                  </div>
                 </div>
               `).join('')}
             </div>
+
+            <!-- Sottocartelle -->
+            <div class="subfolder-container">
+              ${c.sottocartelle.map(s => `
+                <div class="subfolder-header">
+                  <span>📂 ${s.nome}</span>
+                  <div class="file-actions">
+                    <button class="btn btn-sub" style="padding:2px 6px; font-size:0.7rem;" onclick="preparaCaricamento(${c.id}, ${s.id})">+ File</button>
+                    <button class="btn-delete" onclick="eliminaSottocartella(${c.id}, ${s.id})">🗑️</button>
+                  </div>
+                </div>
+                <div class="file-list">
+                  ${s.file.length === 0 ? '<div class="empty">Nessun file</div>' : ''}
+                  ${s.file.map(f => `
+                    <div class="file-item">
+                      <span>📄 ${f.nome}</span>
+                      <div class="file-actions">
+                        <span class="file-badge ${f.tipo}">${f.tipo}</span>
+                        <button class="btn-delete" onclick="eliminaFile(${c.id}, ${f.id}, ${s.id})">🗑️</button>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              `).join('')}
+            </div>
+
           </div>
         `;
         container.innerHTML += html;
