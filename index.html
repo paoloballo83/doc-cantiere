@@ -18,6 +18,7 @@
     .subfolder-header { display: flex; align-items: center; justify-content: space-between; font-size: 0.95rem; font-weight: 600; color: #93c5fd; margin-top: 8px; }
     .file-list { margin-top: 8px; padding-left: 8px; }
     .file-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; font-size: 0.85rem; color: #c9d1d9; }
+    .file-name { cursor: pointer; color: #60a5fa; text-decoration: underline; flex-grow: 1; margin-right: 8px; word-break: break-all; }
     .file-actions { display: flex; align-items: center; gap: 6px; }
     .file-badge { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: 700; }
     .pdf { background: #7f1d1d; color: #fca5a5; }
@@ -28,6 +29,11 @@
     .btn-sub { background: #374151; font-size: 0.8rem; padding: 6px 10px; width: auto; margin-top: 6px; }
     .empty { color: #6b7280; font-size: 0.8rem; font-style: italic; margin-top: 4px; }
     input[type="file"] { display: none; }
+    
+    /* Finestra modale per anteprima foto */
+    #modalAnteprima { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; flex-direction: column; padding: 20px; }
+    #modalAnteprima img { max-width: 100%; max-height: 80vh; border-radius: 8px; }
+    #modalAnteprima button { margin-top: 20px; background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -38,31 +44,30 @@
   </header>
 
   <button class="btn" onclick="nuovoCantiere()">➕ Nuovo Cantiere</button>
-  <button class="btn" style="background:#059669;" onclick="preparaCaricamentoGenerico()">📷 Importa File / Condividi</button>
+  <button class="btn" style="background:#059669;" onclick="preparaCaricamentoGenerico()">📷 Importa File / Foto</button>
   <input type="file" id="fileInput" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" onchange="caricaFile(event)">
 
   <div id="listaCantieri"></div>
 
+  <!-- Finestra per vedere le foto -->
+  <div id="modalAnteprima" onclick="chiudiAnteprima()">
+    <img id="imgVisualizzata" src="" alt="Anteprima">
+    <button onclick="chiudiAnteprima()">Chiudi</button>
+  </div>
+
   <script>
     const PASSWORD_ELIMINAZIONE = "1234";
 
-    let db = JSON.parse(localStorage.getItem('doc_cantiere_db_v2')) || [
-      { 
-        id: 1, 
-        nome: "Cantiere Via Roma 12", 
-        sottocartelle: [
-          { id: 11, nome: "Progetti", file: [{ id: 101, nome: "Progetto_Esecutivo.pdf", tipo: "pdf" }] },
-          { id: 12, nome: "Contabilità", file: [{ id: 102, nome: "Computo.xlsx", tipo: "xls" }] }
-        ],
-        file: [] 
-      }
-    ];
-
-    let targetCaricamento = null; // { cantiereId, sottocartellaId (opzionale) }
+    let db = JSON.parse(localStorage.getItem('doc_cantiere_db_v3')) || [];
+    let targetCaricamento = null;
 
     function salvaDB() {
-      localStorage.setItem('doc_cantiere_db_v2', JSON.stringify(db));
-      mostraCantieri();
+      try {
+        localStorage.setItem('doc_cantiere_db_v3', JSON.stringify(db));
+        mostraCantieri();
+      } catch (e) {
+        alert("⚠️ Memoria del telefono quasi piena! Impossibile salvare file troppo grandi.");
+      }
     }
 
     function nuovoCantiere() {
@@ -160,27 +165,52 @@
       if (ext === 'pdf') tipo = 'pdf';
       if (['xls', 'xlsx'].includes(ext)) tipo = 'xls';
 
-      let cantiere = db.find(c => c.id === targetCaricamento.cantiereId);
-      if (cantiere) {
-        let nuovoFileObj = { id: Date.now(), nome: f.name, tipo: tipo };
-        if (targetCaricamento.subId) {
-          let sub = cantiere.sottocartelle.find(s => s.id === targetCaricamento.subId);
-          if (sub) sub.file.push(nuovoFileObj);
-        } else {
-          cantiere.file.push(nuovoFileObj);
+      let reader = new FileReader();
+      reader.onload = function(event) {
+        let fileDataUrl = event.target.result; // Salva il contenuto reale del file
+
+        let cantiere = db.find(c => c.id === targetCaricamento.cantiereId);
+        if (cantiere) {
+          let nuovoFileObj = { id: Date.now(), nome: f.name, tipo: tipo, dati: fileDataUrl };
+          if (targetCaricamento.subId) {
+            let sub = cantiere.sottocartelle.find(s => s.id === targetCaricamento.subId);
+            if (sub) sub.file.push(nuovoFileObj);
+          } else {
+            cantiere.file.push(nuovoFileObj);
+          }
+          salvaDB();
+          alert("File caricato e aperto con successo!");
         }
-        salvaDB();
-        alert("File caricato con successo!");
+        e.target.value = '';
+        targetCaricamento = null;
+      };
+      reader.readAsDataURL(f);
+    }
+
+    function apriFile(dati, tipo, nome) {
+      if (!dati) {
+        alert("Impossibile aprire questo file (salvato senza dati). Ricaricalo.");
+        return;
       }
-      e.target.value = '';
-      targetCaricamento = null;
+      if (tipo === 'img') {
+        document.getElementById('imgVisualizzata').src = dati;
+        document.getElementById('modalAnteprima').style.display = 'flex';
+      } else {
+        // Per PDF, Excel e Word apre il documento in una nuova scheda del browser
+        let w = window.open('');
+        w.document.write(`<iframe src="${dati}" frameborder="0" style="border:0; top:0; left:0; bottom:0; right:0; width:100%; height:100%;" allowfullscreen></iframe>`);
+      }
+    }
+
+    function chiudiAnteprima() {
+      document.getElementById('modalAnteprima').style.display = 'none';
     }
 
     function mostraCantieri() {
       let container = document.getElementById('listaCantieri');
       container.innerHTML = '';
       if (db.length === 0) {
-        container.innerHTML = '<div class="empty" style="text-align:center; padding: 20px;">Nessun cantiere presente.</div>';
+        container.innerHTML = '<div class="empty" style="text-align:center; padding: 20px;">Nessun cantiere presente. Clicca su "Nuovo Cantiere" per iniziare.</div>';
         return;
       }
 
@@ -199,7 +229,7 @@
             <div class="file-list">
               ${c.file.map(f => `
                 <div class="file-item">
-                  <span>📄 ${f.nome}</span>
+                  <span class="file-name" onclick="apriFile('${f.dati}', '${f.tipo}', '${f.nome}')">📄 ${f.nome}</span>
                   <div class="file-actions">
                     <span class="file-badge ${f.tipo}">${f.tipo}</span>
                     <button class="btn-delete" onclick="eliminaFile(${c.id}, ${f.id})">🗑️</button>
@@ -222,7 +252,7 @@
                   ${s.file.length === 0 ? '<div class="empty">Nessun file</div>' : ''}
                   ${s.file.map(f => `
                     <div class="file-item">
-                      <span>📄 ${f.nome}</span>
+                      <span class="file-name" onclick="apriFile('${f.dati}', '${f.tipo}', '${f.nome}')">📄 ${f.nome}</span>
                       <div class="file-actions">
                         <span class="file-badge ${f.tipo}">${f.tipo}</span>
                         <button class="btn-delete" onclick="eliminaFile(${c.id}, ${f.id}, ${s.id})">🗑️</button>
