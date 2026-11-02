@@ -6,51 +6,57 @@
   <title>DocCantiere</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: #0d0e12; color: #f0f2f5; padding: 16px; padding-bottom: 80px; }
-    header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 16px; border-bottom: 1px solid #2a2d34; margin-bottom: 20px; }
-    h1 { font-size: 1.4rem; color: #fff; font-weight: 700; }
-    .badge { background: #2563eb; color: #fff; font-size: 0.75rem; padding: 4px 8px; border-radius: 12px; font-weight: 600; }
-    .btn { background: #2563eb; color: white; border: none; padding: 12px 16px; border-radius: 10px; font-size: 0.95rem; font-weight: 600; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px; }
-    .btn:active { background: #1d4ed8; }
-    .folder-card { background: #16181e; border: 1px solid #2a2d34; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    body { background-color: #121212; color: #f3f4f6; padding: 16px; padding-bottom: 80px; }
+    header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 16px; border-bottom: 2px solid #ea580c; margin-bottom: 20px; }
+    h1 { font-size: 1.4rem; color: #ffffff; font-weight: 700; }
+    .badge { background: #ea580c; color: #fff; font-size: 0.75rem; padding: 4px 8px; border-radius: 12px; font-weight: 600; }
+    
+    /* Pulsanti principali in Arancione Cantiere */
+    .btn { background: #ea580c; color: white; border: none; padding: 12px 16px; border-radius: 10px; font-size: 0.95rem; font-weight: 600; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px; transition: background 0.2s; }
+    .btn:active { background: #c2410c; }
+    
+    .folder-card { background: #1e1e1e; border: 1px solid #333333; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
     .folder-header { display: flex; align-items: center; justify-content: space-between; font-weight: 600; font-size: 1.1rem; color: #fff; cursor: pointer; }
     .folder-title { display: flex; align-items: center; gap: 8px; flex-grow: 1; }
-    .folder-content { display: none; margin-top: 12px; border-top: 1px solid #2a2d34; padding-top: 10px; }
+    .folder-content { display: none; margin-top: 12px; border-top: 1px solid #333333; padding-top: 10px; }
     .folder-content.aperta { display: block; }
     
-    .subfolder-container { margin-left: 12px; margin-top: 10px; border-left: 2px solid #2a2d34; padding-left: 12px; }
-    .subfolder-header { display: flex; align-items: center; justify-content: space-between; font-size: 0.95rem; font-weight: 600; color: #93c5fd; margin-top: 8px; cursor: pointer; }
+    .subfolder-container { margin-left: 12px; margin-top: 10px; border-left: 2px solid #ea580c; padding-left: 12px; }
+    .subfolder-header { display: flex; align-items: center; justify-content: space-between; font-size: 0.95rem; font-weight: 600; color: #fb923c; margin-top: 8px; cursor: pointer; }
     .subfolder-content { display: none; margin-top: 6px; padding-left: 6px; }
     .subfolder-content.aperta { display: block; }
 
     .file-list { margin-top: 8px; }
-    .file-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; font-size: 0.85rem; color: #c9d1d9; }
-    .file-name { cursor: pointer; color: #60a5fa; text-decoration: underline; flex-grow: 1; margin-right: 8px; word-break: break-all; }
+    .file-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; font-size: 0.85rem; color: #e5e7eb; }
+    .file-name { cursor: pointer; color: #fb923c; text-decoration: underline; flex-grow: 1; margin-right: 8px; word-break: break-all; }
     .file-actions { display: flex; align-items: center; gap: 6px; }
     .file-badge { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: 700; }
     .pdf { background: #7f1d1d; color: #fca5a5; }
     .doc { background: #1e3a8a; color: #bfdbfe; }
     .xls { background: #14532d; color: #bbf7d0; }
     .img { background: #581c87; color: #e9d5ff; }
+    
     .btn-delete { background: none; border: none; color: #ef4444; font-size: 0.9rem; cursor: pointer; padding: 2px 4px; }
-    .btn-sub { background: #374151; font-size: 0.8rem; padding: 6px 10px; width: auto; margin-top: 6px; }
-    .empty { color: #6b7280; font-size: 0.8rem; font-style: italic; margin-top: 4px; }
+    .btn-sub { background: #2d2d2d; border: 1px solid #444; font-size: 0.8rem; padding: 6px 10px; width: auto; margin-top: 6px; color: #fff; }
+    .btn-sub:active { background: #3d3d3d; }
+    
+    .empty { color: #888888; font-size: 0.8rem; font-style: italic; margin-top: 4px; }
     input[type="file"] { display: none; }
     
-    #modalAnteprima { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; flex-direction: column; padding: 20px; }
-    #modalAnteprima img { max-width: 100%; max-height: 80vh; border-radius: 8px; }
-    #modalAnteprima button { margin-top: 20px; background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    #modalAnteprima { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1000; justify-content: center; align-items: center; flex-direction: column; padding: 20px; }
+    #modalAnteprima img { max-width: 100%; max-height: 80vh; border-radius: 8px; border: 2px solid #ea580c; }
+    #modalAnteprima button { margin-top: 20px; background: #ea580c; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
   </style>
 </head>
 <body>
 
   <header>
     <h1>🏗️ DocCantiere</h1>
-    <span class="badge">Offline Pro v5</span>
+    <span class="badge">PRO Black & Orange</span>
   </header>
 
   <button class="btn" onclick="nuovoCantiere()">➕ Nuovo Cantiere</button>
-  <button class="btn" style="background:#059669;" onclick="preparaCaricamentoGenerico()">📷 Importa File / Foto</button>
+  <button class="btn" style="background:#ca8a04;" onclick="preparaCaricamentoGenerico()">📷 Importa File / Foto</button>
   <input type="file" id="fileInput" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" onchange="caricaFile(event)">
 
   <div id="listaCantieri"></div>
@@ -63,21 +69,21 @@
   <script>
     const PASSWORD_ELIMINAZIONE = "1234";
 
-    let db = JSON.parse(localStorage.getItem('doc_cantiere_db_v5')) || [];
-    let cartelleAperte = JSON.parse(localStorage.getItem('doc_cantiere_stati_v5')) || {};
+    let db = JSON.parse(localStorage.getItem('doc_cantiere_db_v6')) || [];
+    let cartelleAperte = JSON.parse(localStorage.getItem('doc_cantiere_stati_v6')) || {};
     let targetCaricamento = null;
 
     function salvaDB() {
       try {
-        localStorage.setItem('doc_cantiere_db_v5', JSON.stringify(db));
+        localStorage.setItem('doc_cantiere_db_v6', JSON.stringify(db));
         mostraCantieri();
       } catch (e) {
-        alert("⚠️ Memoria del browser esaurita! Elimina qualche vecchio file o cantiere per liberare spazio.");
+        alert("⚠️ Memoria del browser esaurita! Elimina qualche vecchio file per liberare spazio.");
       }
     }
 
     function salvaStati() {
-      localStorage.setItem('doc_cantiere_stati_v5', JSON.stringify(cartelleAperte));
+      localStorage.setItem('doc_cantiere_stati_v6', JSON.stringify(cartelleAperte));
     }
 
     function toggleCartella(id) {
@@ -190,7 +196,6 @@
       let reader = new FileReader();
       
       if (tipo === 'img') {
-        // Ridimensiona automaticamente le immagini per non intasare la memoria
         reader.onload = function(event) {
           let img = new Image();
           img.onload = function() {
@@ -217,7 +222,6 @@
         };
         reader.readAsDataURL(f);
       } else {
-        // Per PDF e documenti standard
         reader.onload = function(event) {
           salvaNuovoFileNelDb(f.name, tipo, event.target.result);
         };
@@ -240,7 +244,7 @@
         if (targetCaricamento.subId) cartelleAperte[targetCaricamento.subId] = true;
         salvaStati();
         salvaDB();
-        alert("File caricato e compresso con successo!");
+        alert("File caricato con successo!");
       }
       targetCaricamento = null;
     }
@@ -286,7 +290,7 @@
             
             <div class="folder-content ${cantiereAperto}">
               <button class="btn btn-sub" onclick="nuovaSottocartella(${c.id})">📂 + Aggiungi Sottocartella</button>
-              <button class="btn btn-sub" style="background:#059669;" onclick="preparaCaricamento(${c.id})">📄 + Carica qui</button>
+              <button class="btn btn-sub" style="background:#ea580c; color:#fff;" onclick="preparaCaricamento(${c.id})">📄 + Carica qui</button>
 
               <!-- File diretti del cantiere -->
               <div class="file-list">
@@ -311,7 +315,7 @@
                       <div class="subfolder-header">
                         <span onclick="toggleCartella(${s.id})">${frecciaSub} 📂 ${s.nome}</span>
                         <div class="file-actions">
-                          <button class="btn btn-sub" style="padding:2px 6px; font-size:0.7rem;" onclick="preparaCaricamento(${c.id}, ${s.id})">+ File</button>
+                          <button class="btn btn-sub" style="padding:2px 6px; font-size:0.7rem; background:#ea580c; color:#fff;" onclick="preparaCaricamento(${c.id}, ${s.id})">+ File</button>
                           <button class="btn-delete" onclick="eliminaSottocartella(${c.id}, ${s.id})">🗑️</button>
                         </div>
                       </div>
