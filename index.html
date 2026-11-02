@@ -37,7 +37,6 @@
     .empty { color: #6b7280; font-size: 0.8rem; font-style: italic; margin-top: 4px; }
     input[type="file"] { display: none; }
     
-    /* Finestra modale anteprima */
     #modalAnteprima { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; flex-direction: column; padding: 20px; }
     #modalAnteprima img { max-width: 100%; max-height: 80vh; border-radius: 8px; }
     #modalAnteprima button { margin-top: 20px; background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
@@ -47,7 +46,7 @@
 
   <header>
     <h1>🏗️ DocCantiere</h1>
-    <span class="badge">Offline Pro</span>
+    <span class="badge">Offline Pro v5</span>
   </header>
 
   <button class="btn" onclick="nuovoCantiere()">➕ Nuovo Cantiere</button>
@@ -64,21 +63,21 @@
   <script>
     const PASSWORD_ELIMINAZIONE = "1234";
 
-    let db = JSON.parse(localStorage.getItem('doc_cantiere_db_v4')) || [];
-    let cartelleAperte = JSON.parse(localStorage.getItem('doc_cantiere_stati_v4')) || {};
+    let db = JSON.parse(localStorage.getItem('doc_cantiere_db_v5')) || [];
+    let cartelleAperte = JSON.parse(localStorage.getItem('doc_cantiere_stati_v5')) || {};
     let targetCaricamento = null;
 
     function salvaDB() {
       try {
-        localStorage.setItem('doc_cantiere_db_v4', JSON.stringify(db));
+        localStorage.setItem('doc_cantiere_db_v5', JSON.stringify(db));
         mostraCantieri();
       } catch (e) {
-        alert("⚠️ Memoria quasi piena!");
+        alert("⚠️ Memoria del browser esaurita! Elimina qualche vecchio file o cantiere per liberare spazio.");
       }
     }
 
     function salvaStati() {
-      localStorage.setItem('doc_cantiere_stati_v4', JSON.stringify(cartelleAperte));
+      localStorage.setItem('doc_cantiere_stati_v5', JSON.stringify(cartelleAperte));
     }
 
     function toggleCartella(id) {
@@ -189,27 +188,61 @@
       if (['xls', 'xlsx'].includes(ext)) tipo = 'xls';
 
       let reader = new FileReader();
-      reader.onload = function(event) {
-        let fileDataUrl = event.target.result;
-        let cantiere = db.find(c => c.id === targetCaricamento.cantiereId);
-        if (cantiere) {
-          let nuovoFileObj = { id: Date.now(), nome: f.name, tipo: tipo, dati: fileDataUrl };
-          if (targetCaricamento.subId) {
-            let sub = cantiere.sottocartelle.find(s => s.id === targetCaricamento.subId);
-            if (sub) sub.file.push(nuovoFileObj);
-          } else {
-            cantiere.file.push(nuovoFileObj);
-          }
-          cartelleAperte[targetCaricamento.cantiereId] = true;
-          if (targetCaricamento.subId) cartelleAperte[targetCaricamento.subId] = true;
-          salvaStati();
-          salvaDB();
-          alert("File caricato con successo!");
+      
+      if (tipo === 'img') {
+        // Ridimensiona automaticamente le immagini per non intasare la memoria
+        reader.onload = function(event) {
+          let img = new Image();
+          img.onload = function() {
+            let canvas = document.createElement('canvas');
+            let ctx = canvas.getContext('2d');
+            let MAX_WIDTH = 1024;
+            let MAX_HEIGHT = 1024;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+              if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+            } else {
+              if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            let compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+            salvaNuovoFileNelDb(f.name, tipo, compressedDataUrl);
+          };
+          img.src = event.target.result;
+        };
+        reader.readAsDataURL(f);
+      } else {
+        // Per PDF e documenti standard
+        reader.onload = function(event) {
+          salvaNuovoFileNelDb(f.name, tipo, event.target.result);
+        };
+        reader.readAsDataURL(f);
+      }
+      e.target.value = '';
+    }
+
+    function salvaNuovoFileNelDb(nomeFile, tipo, datiFile) {
+      let cantiere = db.find(c => c.id === targetCaricamento.cantiereId);
+      if (cantiere) {
+        let nuovoFileObj = { id: Date.now(), nome: nomeFile, tipo: tipo, dati: datiFile };
+        if (targetCaricamento.subId) {
+          let sub = cantiere.sottocartelle.find(s => s.id === targetCaricamento.subId);
+          if (sub) sub.file.push(nuovoFileObj);
+        } else {
+          cantiere.file.push(nuovoFileObj);
         }
-        e.target.value = '';
-        targetCaricamento = null;
-      };
-      reader.readAsDataURL(f);
+        cartelleAperte[targetCaricamento.cantiereId] = true;
+        if (targetCaricamento.subId) cartelleAperte[targetCaricamento.subId] = true;
+        salvaStati();
+        salvaDB();
+        alert("File caricato e compresso con successo!");
+      }
+      targetCaricamento = null;
     }
 
     function apriFile(dati, tipo) {
