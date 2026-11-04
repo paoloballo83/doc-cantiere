@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DocCantiere</title>
+  <title>DocCantiere Cloud</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: #121212; color: #f3f4f6; padding: 16px; padding-bottom: 80px; }
@@ -11,7 +11,6 @@
     h1 { font-size: 1.4rem; color: #ffffff; font-weight: 700; }
     .badge { background: #ea580c; color: #fff; font-size: 0.75rem; padding: 4px 8px; border-radius: 12px; font-weight: 600; }
     
-    /* Pulsanti principali in Arancione Cantiere */
     .btn { background: #ea580c; color: white; border: none; padding: 12px 16px; border-radius: 10px; font-size: 0.95rem; font-weight: 600; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px; transition: background 0.2s; }
     .btn:active { background: #c2410c; }
     
@@ -43,48 +42,93 @@
     .empty { color: #888888; font-size: 0.8rem; font-style: italic; margin-top: 4px; }
     input[type="file"] { display: none; }
     
-    #modalAnteprima { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1000; justify-content: center; align-items: center; flex-direction: column; padding: 20px; }
-    #modalAnteprima img { max-width: 100%; max-height: 80vh; border-radius: 8px; border: 2px solid #ea580c; }
-    #modalAnteprima button { margin-top: 20px; background: #ea580c; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    #loadingOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); color: #ea580c; font-size: 1.2rem; font-weight: bold; justify-content: center; align-items: center; z-index: 2000; flex-direction: column; }
   </style>
+
+  <!-- Firebase Web SDKs -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA7QlLmpOEcZ-z-8EyjYuzrhy-IJdsrdkE",
+      authDomain: "doccantiere-68569.firebaseapp.com",
+      projectId: "doccantiere-68569",
+      storageBucket: "doccantiere-68569.firebasestorage.app",
+      messagingSenderId: "853840781249",
+      appId: "1:853840781249:web:759217b71fed3e98a05940"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    window.db = db;
+    window.storage = storage;
+    window.fCollection = collection;
+    window.fOnSnapshot = onSnapshot;
+    window.fDoc = doc;
+    window.fSetDoc = setDoc;
+    window.fUpdateDoc = updateDoc;
+    window.fDeleteDoc = deleteDoc;
+    window.fRef = ref;
+    window.fUploadBytes = uploadBytes;
+    window.fGetDownloadURL = getDownloadURL;
+    window.fDeleteObject = deleteObject;
+  </script>
 </head>
 <body>
 
   <header>
     <h1>🏗️ DocCantiere</h1>
-    <span class="badge">Protected PRO</span>
+    <span class="badge">Cloud Unlimited</span>
   </header>
 
   <button class="btn" onclick="nuovoCantiere()">➕ Nuovo Cantiere</button>
-  <button class="btn" style="background:#ca8a04;" onclick="preparaCaricamentoGenerico()">📷 Importa File / Foto</button>
-  <input type="file" id="fileInput" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" onchange="caricaFile(event)">
+  <button class="btn" style="background:#ca8a04;" onclick="preparaCaricamentoGenerico()">📷 Carica File nel Cloud</button>
+  <input type="file" id="fileInput" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" onchange="caricaFileCloud(event)">
 
   <div id="listaCantieri"></div>
 
-  <div id="modalAnteprima" onclick="chiudiAnteprima()">
-    <img id="imgVisualizzata" src="" alt="Anteprima">
-    <button onclick="chiudiAnteprima()">Chiudi</button>
+  <div id="loadingOverlay">
+    <div id="loadingText">☁️ Caricamento sul Cloud...</div>
   </div>
 
   <script>
-    // Password impostata per le eliminazioni
     const PASSWORD_ELIMINAZIONE = "1234";
-
-    let db = JSON.parse(localStorage.getItem('doc_cantiere_db_v7')) || [];
-    let cartelleAperte = JSON.parse(localStorage.getItem('doc_cantiere_stati_v7')) || {};
+    let cantieriData = [];
+    let cartelleAperte = JSON.parse(localStorage.getItem('doc_cantiere_stati_v9')) || {};
     let targetCaricamento = null;
 
-    function salvaDB() {
-      try {
-        localStorage.setItem('doc_cantiere_db_v7', JSON.stringify(db));
-        mostraCantieri();
-      } catch (e) {
-        alert("⚠️ Memoria del browser esaurita! Elimina qualche vecchio file per liberare spazio.");
-      }
+    function mostraLoading(testo) {
+      document.getElementById('loadingText').innerText = testo;
+      document.getElementById('loadingOverlay').style.display = 'flex';
     }
 
+    function nascondiLoading() {
+      document.getElementById('loadingOverlay').style.display = 'none';
+    }
+
+    // Ascolto in tempo reale dei dati da Firebase Cloud
+    window.addEventListener('load', () => {
+      let checkFirebase = setInterval(() => {
+        if (window.db) {
+          clearInterval(checkFirebase);
+          const colRef = window.fCollection(window.db, "cantieri");
+          window.fOnSnapshot(colRef, (snapshot) => {
+            cantieriData = [];
+            snapshot.forEach((docSnap) => {
+              cantieriData.push({ idDoc: docSnap.id, ...docSnap.data() });
+            });
+            mostraCantieri();
+          });
+        }
+      }, 200);
+    });
+
     function salvaStati() {
-      localStorage.setItem('doc_cantiere_stati_v7', JSON.stringify(cartelleAperte));
+      localStorage.setItem('doc_cantiere_stati_v9', JSON.stringify(cartelleAperte));
     }
 
     function toggleCartella(id) {
@@ -93,111 +137,108 @@
       mostraCantieri();
     }
 
-    function nuovoCantiere() {
+    async function nuovoCantiere() {
       let nome = prompt("Nome del nuovo cantiere:");
       if (nome && nome.trim() !== "") {
-        let id = Date.now();
-        db.push({ id: id, nome: nome.trim(), sottocartelle: [], file: [] });
-        cartelleAperte[id] = true;
+        let idDoc = "cantiere_" + Date.now();
+        await window.fSetDoc(window.fDoc(window.db, "cantieri", idDoc), {
+          id: idDoc,
+          nome: nome.trim(),
+          sottocartelle: [],
+          file: []
+        });
+        cartelleAperte[idDoc] = true;
         salvaStati();
-        salvaDB();
       }
     }
 
-    // Eliminazione Cantiere con Password
-    function eliminaCantiere(id) {
-      let cantiere = db.find(c => c.id === id);
+    async function eliminaCantiere(idDoc) {
+      let cantiere = cantieriData.find(c => c.idDoc === idDoc);
       if (!cantiere) return;
-      if (!confirm(`⚠️ ATTENZIONE: Vuoi davvero eliminare il cantiere "${cantiere.nome}" e TUTTI i documenti al suo interno?`)) return;
-      let pwd = prompt("🔒 Inserisci la password per confermare l'eliminazione:");
+      if (!confirm(`⚠️ Vuoi eliminare il cantiere "${cantiere.nome}"?`)) return;
+      let pwd = prompt("🔒 Inserisci la password per confermare:");
       if (pwd !== PASSWORD_ELIMINAZIONE) {
-        alert("❌ Password errata. Eliminazione annullata.");
+        alert("❌ Password errata.");
         return;
       }
-      db = db.filter(c => c.id !== id);
-      salvaDB();
-      alert("Cantiere eliminato.");
+      mostraLoading("Cancellazione in corso...");
+      try {
+        await window.fDeleteDoc(window.fDoc(window.db, "cantieri", idDoc));
+      } catch(e) {
+        alert("Errore cancellazione: " + e.message);
+      }
+      nascondiLoading();
     }
 
-    function nuovaSottocartella(cantiereId) {
+    async function nuovaSottocartella(idDoc) {
       let nome = prompt("Nome della sottocartella (es. Fatture, Sicurezza, Permessi):");
       if (nome && nome.trim() !== "") {
-        let cantiere = db.find(c => c.id === cantiereId);
+        let cantiere = cantieriData.find(c => c.idDoc === idDoc);
         if (cantiere) {
-          let subId = Date.now();
-          cantiere.sottocartelle.push({ id: subId, nome: nome.trim(), file: [] });
+          let subId = "sub_" + Date.now();
+          let subAggiornate = cantiere.sottocartelle || [];
+          subAggiornate.push({ id: subId, nome: nome.trim(), file: [] });
+          
+          await window.fUpdateDoc(window.fDoc(window.db, "cantieri", idDoc), {
+            sottocartelle: subAggiornate
+          });
           cartelleAperte[subId] = true;
           salvaStati();
-          salvaDB();
         }
       }
     }
 
-    // Eliminazione Sottocartella con Password
-    function eliminaSottocartella(cantiereId, subId) {
-      let cantiere = db.find(c => c.id === cantiereId);
+    async function eliminaSottocartella(idDoc, subId) {
+      let cantiere = cantieriData.find(c => c.idDoc === idDoc);
       if (!cantiere) return;
-      let sub = cantiere.sottocartelle.find(s => s.id === subId);
-      if (!sub) return;
-
-      if (!confirm(`⚠️ Vuoi eliminare la sottocartella "${sub.nome}"?`)) return;
-      let pwd = prompt("🔒 Inserisci la password per confermare l'eliminazione:");
+      if (!confirm("Vuoi eliminare questa sottocartella?")) return;
+      let pwd = prompt("🔒 Inserisci la password:");
       if (pwd !== PASSWORD_ELIMINAZIONE) {
-        alert("❌ Password errata. Eliminazione annullata.");
+        alert("❌ Password errata.");
         return;
       }
-      cantiere.sottocartelle = cantiere.sottocartelle.filter(s => s.id !== subId);
-      salvaDB();
+      mostraLoading("Cancellazione in corso...");
+      let subAggiornate = cantiere.sottocartelle.filter(s => s.id !== subId);
+      await window.fUpdateDoc(window.fDoc(window.db, "cantieri", idDoc), {
+        sottocartelle: subAggiornate
+      });
+      nascondiLoading();
     }
 
-    function eliminaFile(cantiereId, fileId, subId = null) {
-      let cantiere = db.find(c => c.id === cantiereId);
-      if (!cantiere) return;
-      if (!confirm("Vuoi eliminare questo file?")) return;
-
-      if (subId) {
-        let sub = cantiere.sottocartelle.find(s => s.id === subId);
-        if (sub) sub.file = sub.file.filter(f => f.id !== fileId);
-      } else {
-        cantiere.file = cantiere.file.filter(f => f.id !== fileId);
-      }
-      salvaDB();
-    }
-
-    function preparaCaricamento(cantiereId, subId = null) {
-      targetCaricamento = { cantiereId, subId };
+    function preparaCaricamento(idDoc, subId = null) {
+      targetCaricamento = { idDoc, subId };
       document.getElementById('fileInput').click();
     }
 
     function preparaCaricamentoGenerico() {
-      if (db.length === 0) {
+      if (cantieriData.length === 0) {
         alert("Crea prima un cantiere!");
         return;
       }
       let opzioni = [];
       let riferimenti = [];
 
-      db.forEach(c => {
+      cantieriData.forEach(c => {
         opzioni.push(`📁 Cantiere: ${c.nome}`);
-        riferimenti.push({ cantiereId: c.id, subId: null });
-        c.sottocartelle.forEach(s => {
+        riferimenti.push({ idDoc: c.idDoc, subId: null });
+        (c.sottocartelle || []).forEach(s => {
           opzioni.push(`   📂 ${c.nome} ➔ ${s.nome}`);
-          riferimenti.push({ cantiereId: c.id, subId: s.id });
+          riferimenti.push({ idDoc: c.idDoc, subId: s.id });
         });
       });
 
-      let testoScelta = "Scegli dove salvare il file:\n\n" + opzioni.map((o, i) => `${i + 1}. ${o}`).join("\n");
+      let testoScelta = "Scegli dove catalogare il file:\n\n" + opzioni.map((o, i) => `${i + 1}. ${o}`).join("\n");
       let scelta = prompt(testoScelta);
       let indice = parseInt(scelta) - 1;
 
       if (!isNaN(indice) && riferimenti[indice]) {
-        preparaCaricamento(riferimenti[indice].cantiereId, riferimenti[indice].subId);
+        preparaCaricamento(riferimenti[indice].idDoc, riferimenti[indice].subId);
       } else if (scelta !== null) {
         alert("Scelta non valida.");
       }
     }
 
-    function caricaFile(e) {
+    async function caricaFileCloud(e) {
       if (!e.target.files.length || !targetCaricamento) return;
       let f = e.target.files[0];
       let ext = f.name.split('.').pop().toLowerCase();
@@ -206,141 +247,149 @@
       if (ext === 'pdf') tipo = 'pdf';
       if (['xls', 'xlsx'].includes(ext)) tipo = 'xls';
 
-      let reader = new FileReader();
-      
-      if (tipo === 'img') {
-        reader.onload = function(event) {
-          let img = new Image();
-          img.onload = function() {
-            let canvas = document.createElement('canvas');
-            let ctx = canvas.getContext('2d');
-            let MAX_WIDTH = 1024;
-            let MAX_HEIGHT = 1024;
-            let width = img.width;
-            let height = img.height;
+      mostraLoading("☁️ Invio file al Cloud in corso...");
 
-            if (width > height) {
-              if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
-            } else {
-              if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+      try {
+        let storagePath = `file_cantiere/${Date.now()}_${f.name}`;
+        let fileRef = window.fRef(window.storage, storagePath);
+        
+        // Upload diretto su Google Storage
+        await window.fUploadBytes(fileRef, f);
+        let downloadURL = await window.fGetDownloadURL(fileRef);
+
+        let nuovoFileObj = { 
+          id: "file_" + Date.now(), 
+          nome: f.name, 
+          tipo: tipo, 
+          url: downloadURL,
+          storagePath: storagePath 
+        };
+
+        let cantiere = cantieriData.find(c => c.idDoc === targetCaricamento.idDoc);
+        if (cantiere) {
+          if (targetCaricamento.subId) {
+            let subList = cantiere.sottocartelle || [];
+            let sub = subList.find(s => s.id === targetCaricamento.subId);
+            if (sub) {
+              sub.file = sub.file || [];
+              sub.file.push(nuovoFileObj);
             }
-            canvas.width = width;
-            canvas.height = height;
-            ctx.drawImage(img, 0, 0, width, height);
-            
-            let compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
-            salvaNuovoFileNelDb(f.name, tipo, compressedDataUrl);
-          };
-          img.src = event.target.result;
-        };
-        reader.readAsDataURL(f);
-      } else {
-        reader.onload = function(event) {
-          salvaNuovoFileNelDb(f.name, tipo, event.target.result);
-        };
-        reader.readAsDataURL(f);
+            await window.fUpdateDoc(window.fDoc(window.db, "cantieri", targetCaricamento.idDoc), {
+              sottocartelle: subList
+            });
+          } else {
+            let fileList = cantiere.file || [];
+            fileList.push(nuovoFileObj);
+            await window.fUpdateDoc(window.fDoc(window.db, "cantieri", targetCaricamento.idDoc), {
+              file: fileList
+            });
+          }
+          cartelleAperte[targetCaricamento.idDoc] = true;
+          if (targetCaricamento.subId) cartelleAperte[targetCaricamento.subId] = true;
+          salvaStati();
+        }
+      } catch(err) {
+        alert("❌ Errore durante il caricamento: " + err.message);
       }
+
+      nascondiLoading();
+      targetCaricamento = null;
       e.target.value = '';
     }
 
-    function salvaNuovoFileNelDb(nomeFile, tipo, datiFile) {
-      let cantiere = db.find(c => c.id === targetCaricamento.cantiereId);
-      if (cantiere) {
-        let nuovoFileObj = { id: Date.now(), nome: nomeFile, tipo: tipo, dati: datiFile };
-        if (targetCaricamento.subId) {
-          let sub = cantiere.sottocartelle.find(s => s.id === targetCaricamento.subId);
-          if (sub) sub.file.push(nuovoFileObj);
+    async function eliminaFile(idDoc, fileId, subId = null) {
+      let cantiere = cantieriData.find(c => c.idDoc === idDoc);
+      if (!cantiere) return;
+      if (!confirm("Rimuovere il file dal Cloud?")) return;
+
+      mostraLoading("Cancellazione file...");
+
+      try {
+        if (subId) {
+          let subList = cantiere.sottocartelle || [];
+          let sub = subList.find(s => s.id === subId);
+          if (sub) {
+            sub.file = sub.file.filter(f => f.id !== fileId);
+          }
+          await window.fUpdateDoc(window.fDoc(window.db, "cantieri", idDoc), { sottocartelle: subList });
         } else {
-          cantiere.file.push(nuovoFileObj);
+          let fileList = (cantiere.file || []).filter(f => f.id !== fileId);
+          await window.fUpdateDoc(window.fDoc(window.db, "cantieri", idDoc), { file: fileList });
         }
-        cartelleAperte[targetCaricamento.cantiereId] = true;
-        if (targetCaricamento.subId) cartelleAperte[targetCaricamento.subId] = true;
-        salvaStati();
-        salvaDB();
-        alert("File caricato con successo!");
+      } catch(e) {
+        alert("Errore elimina file: " + e.message);
       }
-      targetCaricamento = null;
+
+      nascondiLoading();
     }
 
-    function apriFile(dati, tipo) {
-      if (!dati) {
-        alert("Impossibile aprire questo file. Ricaricalo.");
-        return;
-      }
-      if (tipo === 'img') {
-        document.getElementById('imgVisualizzata').src = dati;
-        document.getElementById('modalAnteprima').style.display = 'flex';
+    function apriFile(url) {
+      if (url) {
+        window.open(url, '_blank');
       } else {
-        let w = window.open('');
-        w.document.write(`<iframe src="${dati}" frameborder="0" style="border:0; top:0; left:0; bottom:0; right:0; width:100%; height:100%;" allowfullscreen></iframe>`);
+        alert("Link non valido.");
       }
-    }
-
-    function chiudiAnteprima() {
-      document.getElementById('modalAnteprima').style.display = 'none';
     }
 
     function mostraCantieri() {
       let container = document.getElementById('listaCantieri');
       container.innerHTML = '';
-      if (db.length === 0) {
+      if (cantieriData.length === 0) {
         container.innerHTML = '<div class="empty" style="text-align:center; padding: 20px;">Nessun cantiere presente. Clicca su "Nuovo Cantiere" per iniziare.</div>';
         return;
       }
 
-      db.forEach(c => {
-        let cantiereAperto = cartelleAperte[c.id] ? 'aperta' : '';
-        let frecciaCantiere = cartelleAperte[c.id] ? '▼' : '▶';
+      cantieriData.forEach(c => {
+        let cantiereAperto = cartelleAperte[c.idDoc] ? 'aperta' : '';
+        let frecciaCantiere = cartelleAperte[c.idDoc] ? '▼' : '▶';
 
         let html = `
           <div class="folder-card">
             <div class="folder-header">
-              <div class="folder-title" onclick="toggleCartella(${c.id})">
+              <div class="folder-title" onclick="toggleCartella('${c.idDoc}')">
                 <span>${frecciaCantiere} 📁</span> <span>${c.nome}</span>
               </div>
-              <button class="btn-delete" onclick="eliminaCantiere(${c.id})" title="Elimina cantiere">🗑️</button>
+              <button class="btn-delete" onclick="eliminaCantiere('${c.idDoc}')" title="Elimina cantiere">🗑️</button>
             </div>
             
             <div class="folder-content ${cantiereAperto}">
-              <button class="btn btn-sub" onclick="nuovaSottocartella(${c.id})">📂 + Aggiungi Sottocartella</button>
-              <button class="btn btn-sub" style="background:#ea580c; color:#fff;" onclick="preparaCaricamento(${c.id})">📄 + Carica qui</button>
+              <button class="btn btn-sub" onclick="nuovaSottocartella('${c.idDoc}')">📂 + Aggiungi Sottocartella</button>
+              <button class="btn btn-sub" style="background:#ea580c; color:#fff;" onclick="preparaCaricamento('${c.idDoc}')">📄 + Carica qui</button>
 
-              <!-- File diretti del cantiere -->
               <div class="file-list">
-                ${c.file.map(f => `
+                ${(c.file || []).map(f => `
                   <div class="file-item">
-                    <span class="file-name" onclick="apriFile('${f.dati}', '${f.tipo}')">📄 ${f.nome}</span>
+                    <span class="file-name" onclick="apriFile('${f.url}')">📄 ${f.nome}</span>
                     <div class="file-actions">
                       <span class="file-badge ${f.tipo}">${f.tipo}</span>
-                      <button class="btn-delete" onclick="eliminaFile(${c.id}, ${f.id})">🗑️</button>
+                      <button class="btn-delete" onclick="eliminaFile('${c.idDoc}', '${f.id}')">🗑️</button>
                     </div>
                   </div>
                 `).join('')}
               </div>
 
-              <!-- Sottocartelle -->
               <div class="subfolder-container">
-                ${c.sottocartelle.map(s => {
+                ${(c.sottocartelle || []).map(s => {
                   let subAperta = cartelleAperte[s.id] ? 'aperta' : '';
                   let frecciaSub = cartelleAperte[s.id] ? '▼' : '▶';
                   return `
                     <div>
                       <div class="subfolder-header">
-                        <span onclick="toggleCartella(${s.id})">${frecciaSub} 📂 ${s.nome}</span>
+                        <span onclick="toggleCartella('${s.id}')">${frecciaSub} 📂 ${s.nome}</span>
                         <div class="file-actions">
-                          <button class="btn btn-sub" style="padding:2px 6px; font-size:0.7rem; background:#ea580c; color:#fff;" onclick="preparaCaricamento(${c.id}, ${s.id})">+ File</button>
-                          <button class="btn-delete" onclick="eliminaSottocartella(${c.id}, ${s.id})">🗑️</button>
+                          <button class="btn btn-sub" style="padding:2px 6px; font-size:0.7rem; background:#ea580c; color:#fff;" onclick="preparaCaricamento('${c.idDoc}', '${s.id}')">+ File</button>
+                          <button class="btn-delete" onclick="eliminaSottocartella('${c.idDoc}', '${s.id}')">🗑️</button>
                         </div>
                       </div>
                       <div class="subfolder-content ${subAperta}">
                         <div class="file-list">
-                          ${s.file.length === 0 ? '<div class="empty">Nessun file</div>' : ''}
-                          ${s.file.map(f => `
+                          ${(!s.file || s.file.length === 0) ? '<div class="empty">Nessun file</div>' : ''}
+                          ${(s.file || []).map(f => `
                             <div class="file-item">
-                              <span class="file-name" onclick="apriFile('${f.dati}', '${f.tipo}')">📄 ${f.nome}</span>
+                              <span class="file-name" onclick="apriFile('${f.url}')">📄 ${f.nome}</span>
                               <div class="file-actions">
                                 <span class="file-badge ${f.tipo}">${f.tipo}</span>
-                                <button class="btn-delete" onclick="eliminaFile(${c.id}, ${f.id}, ${s.id})">🗑️</button>
+                                <button class="btn-delete" onclick="eliminaFile('${c.idDoc}', '${f.id}', '${s.id}')">🗑️</button>
                               </div>
                             </div>
                           `).join('')}
@@ -357,8 +406,6 @@
         container.innerHTML += html;
       });
     }
-
-    mostraCantieri();
   </script>
 </body>
 </html>
