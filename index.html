@@ -48,8 +48,8 @@
   <!-- Firebase Web SDKs -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-    import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+    import { getFirestore, collection, getDocs, doc, setDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyA7QlLmpOEcZ-z-8EyjYuzrhy-IJdsrdkE",
@@ -67,7 +67,7 @@
     window.db = db;
     window.storage = storage;
     window.fCollection = collection;
-    window.fOnSnapshot = onSnapshot;
+    window.fGetDocs = getDocs;
     window.fDoc = doc;
     window.fSetDoc = setDoc;
     window.fUpdateDoc = updateDoc;
@@ -75,14 +75,36 @@
     window.fRef = ref;
     window.fUploadBytes = uploadBytes;
     window.fGetDownloadURL = getDownloadURL;
-    window.fDeleteObject = deleteObject;
+
+    // Caricamento iniziale sicuro dei dati da Firestore
+    window.caricaDatiCloud = async function() {
+      try {
+        const querySnapshot = await window.fGetDocs(window.fCollection(window.db, "cantieri"));
+        cantieriData = [];
+        querySnapshot.forEach((docSnap) => {
+          cantieriData.push({ idDoc: docSnap.id, ...docSnap.data() });
+        });
+        mostraCantieri();
+      } catch (e) {
+        console.error("Errore di caricamento cloud: ", e);
+      }
+    };
+
+    window.addEventListener('load', () => {
+      let check = setInterval(() => {
+        if (window.db) {
+          clearInterval(check);
+          window.caricaDatiCloud();
+        }
+      }, 200);
+    });
   </script>
 </head>
 <body>
 
   <header>
     <h1>🏗️ DocCantiere</h1>
-    <span class="badge">Cloud Unlimited</span>
+    <span class="badge">Cloud Pro</span>
   </header>
 
   <button class="btn" onclick="nuovoCantiere()">➕ Nuovo Cantiere</button>
@@ -92,13 +114,13 @@
   <div id="listaCantieri"></div>
 
   <div id="loadingOverlay">
-    <div id="loadingText">☁️ Caricamento sul Cloud...</div>
+    <div id="loadingText">☁️ Sincronizzazione in corso...</div>
   </div>
 
   <script>
     const PASSWORD_ELIMINAZIONE = "1234";
     let cantieriData = [];
-    let cartelleAperte = JSON.parse(localStorage.getItem('doc_cantiere_stati_v9')) || {};
+    let cartelleAperte = JSON.parse(localStorage.getItem('doc_cantiere_stati_v10')) || {};
     let targetCaricamento = null;
 
     function mostraLoading(testo) {
@@ -110,25 +132,8 @@
       document.getElementById('loadingOverlay').style.display = 'none';
     }
 
-    // Ascolto in tempo reale dei dati da Firebase Cloud
-    window.addEventListener('load', () => {
-      let checkFirebase = setInterval(() => {
-        if (window.db) {
-          clearInterval(checkFirebase);
-          const colRef = window.fCollection(window.db, "cantieri");
-          window.fOnSnapshot(colRef, (snapshot) => {
-            cantieriData = [];
-            snapshot.forEach((docSnap) => {
-              cantieriData.push({ idDoc: docSnap.id, ...docSnap.data() });
-            });
-            mostraCantieri();
-          });
-        }
-      }, 200);
-    });
-
     function salvaStati() {
-      localStorage.setItem('doc_cantiere_stati_v9', JSON.stringify(cartelleAperte));
+      localStorage.setItem('doc_cantiere_stati_v10', JSON.stringify(cartelleAperte));
     }
 
     function toggleCartella(id) {
@@ -140,15 +145,15 @@
     async function nuovoCantiere() {
       let nome = prompt("Nome del nuovo cantiere:");
       if (nome && nome.trim() !== "") {
+        mostraLoading("Creazione cantiere...");
         let idDoc = "cantiere_" + Date.now();
-        await window.fSetDoc(window.fDoc(window.db, "cantieri", idDoc), {
-          id: idDoc,
-          nome: nome.trim(),
-          sottocartelle: [],
-          file: []
-        });
+        let nuovoObj = { id: idDoc, nome: nome.trim(), sottocartelle: [], file: [] };
+        
+        await window.fSetDoc(window.fDoc(window.db, "cantieri", idDoc), nuovoObj);
         cartelleAperte[idDoc] = true;
         salvaStati();
+        await window.caricaDatiCloud();
+        nascondiLoading();
       }
     }
 
@@ -162,11 +167,8 @@
         return;
       }
       mostraLoading("Cancellazione in corso...");
-      try {
-        await window.fDeleteDoc(window.fDoc(window.db, "cantieri", idDoc));
-      } catch(e) {
-        alert("Errore cancellazione: " + e.message);
-      }
+      await window.fDeleteDoc(window.fDoc(window.db, "cantieri", idDoc));
+      await window.caricaDatiCloud();
       nascondiLoading();
     }
 
@@ -175,15 +177,16 @@
       if (nome && nome.trim() !== "") {
         let cantiere = cantieriData.find(c => c.idDoc === idDoc);
         if (cantiere) {
+          mostraLoading("Aggiunta sottocartella...");
           let subId = "sub_" + Date.now();
           let subAggiornate = cantiere.sottocartelle || [];
           subAggiornate.push({ id: subId, nome: nome.trim(), file: [] });
           
-          await window.fUpdateDoc(window.fDoc(window.db, "cantieri", idDoc), {
-            sottocartelle: subAggiornate
-          });
+          await window.fUpdateDoc(window.fDoc(window.db, "cantieri", idDoc), { sottocartelle: subAggiornate });
           cartelleAperte[subId] = true;
           salvaStati();
+          await window.caricaDatiCloud();
+          nascondiLoading();
         }
       }
     }
@@ -197,11 +200,10 @@
         alert("❌ Password errata.");
         return;
       }
-      mostraLoading("Cancellazione in corso...");
+      mostraLoading("Cancellazione...");
       let subAggiornate = cantiere.sottocartelle.filter(s => s.id !== subId);
-      await window.fUpdateDoc(window.fDoc(window.db, "cantieri", idDoc), {
-        sottocartelle: subAggiornate
-      });
+      await window.fUpdateDoc(window.fDoc(window.db, "cantieri", idDoc), { sottocartelle: subAggiornate });
+      await window.caricaDatiCloud();
       nascondiLoading();
     }
 
@@ -253,19 +255,12 @@
         let storagePath = `file_cantiere/${Date.now()}_${f.name}`;
         let fileRef = window.fRef(window.storage, storagePath);
         
-        // Upload diretto su Google Storage
         await window.fUploadBytes(fileRef, f);
         let downloadURL = await window.fGetDownloadURL(fileRef);
 
-        let nuovoFileObj = { 
-          id: "file_" + Date.now(), 
-          nome: f.name, 
-          tipo: tipo, 
-          url: downloadURL,
-          storagePath: storagePath 
-        };
-
+        let nuovoFileObj = { id: "file_" + Date.now(), nome: f.name, tipo: tipo, url: downloadURL };
         let cantiere = cantieriData.find(c => c.idDoc === targetCaricamento.idDoc);
+
         if (cantiere) {
           if (targetCaricamento.subId) {
             let subList = cantiere.sottocartelle || [];
@@ -274,19 +269,16 @@
               sub.file = sub.file || [];
               sub.file.push(nuovoFileObj);
             }
-            await window.fUpdateDoc(window.fDoc(window.db, "cantieri", targetCaricamento.idDoc), {
-              sottocartelle: subList
-            });
+            await window.fUpdateDoc(window.fDoc(window.db, "cantieri", targetCaricamento.idDoc), { sottocartelle: subList });
           } else {
             let fileList = cantiere.file || [];
             fileList.push(nuovoFileObj);
-            await window.fUpdateDoc(window.fDoc(window.db, "cantieri", targetCaricamento.idDoc), {
-              file: fileList
-            });
+            await window.fUpdateDoc(window.fDoc(window.db, "cantieri", targetCaricamento.idDoc), { file: fileList });
           }
           cartelleAperte[targetCaricamento.idDoc] = true;
           if (targetCaricamento.subId) cartelleAperte[targetCaricamento.subId] = true;
           salvaStati();
+          await window.caricaDatiCloud();
         }
       } catch(err) {
         alert("❌ Errore durante il caricamento: " + err.message);
@@ -300,35 +292,29 @@
     async function eliminaFile(idDoc, fileId, subId = null) {
       let cantiere = cantieriData.find(c => c.idDoc === idDoc);
       if (!cantiere) return;
-      if (!confirm("Rimuovere il file dal Cloud?")) return;
+      if (!confirm("Rimuovere il file?")) return;
 
-      mostraLoading("Cancellazione file...");
-
+      mostraLoading("Rimozione file...");
       try {
         if (subId) {
           let subList = cantiere.sottocartelle || [];
           let sub = subList.find(s => s.id === subId);
-          if (sub) {
-            sub.file = sub.file.filter(f => f.id !== fileId);
-          }
+          if (sub) sub.file = sub.file.filter(f => f.id !== fileId);
           await window.fUpdateDoc(window.fDoc(window.db, "cantieri", idDoc), { sottocartelle: subList });
         } else {
           let fileList = (cantiere.file || []).filter(f => f.id !== fileId);
           await window.fUpdateDoc(window.fDoc(window.db, "cantieri", idDoc), { file: fileList });
         }
+        await window.caricaDatiCloud();
       } catch(e) {
-        alert("Errore elimina file: " + e.message);
+        alert("Errore: " + e.message);
       }
-
       nascondiLoading();
     }
 
     function apriFile(url) {
-      if (url) {
-        window.open(url, '_blank');
-      } else {
-        alert("Link non valido.");
-      }
+      if (url) window.open(url, '_blank');
+      else alert("Link non disponibile.");
     }
 
     function mostraCantieri() {
