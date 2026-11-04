@@ -52,7 +52,7 @@
 
   <header>
     <h1>🏗️ DocCantiere</h1>
-    <span class="badge">PRO Black & Orange</span>
+    <span class="badge">Protected PRO</span>
   </header>
 
   <button class="btn" onclick="nuovoCantiere()">➕ Nuovo Cantiere</button>
@@ -67,15 +67,16 @@
   </div>
 
   <script>
+    // Password impostata per le eliminazioni
     const PASSWORD_ELIMINAZIONE = "1234";
 
-    let db = JSON.parse(localStorage.getItem('doc_cantiere_db_v6')) || [];
-    let cartelleAperte = JSON.parse(localStorage.getItem('doc_cantiere_stati_v6')) || {};
+    let db = JSON.parse(localStorage.getItem('doc_cantiere_db_v7')) || [];
+    let cartelleAperte = JSON.parse(localStorage.getItem('doc_cantiere_stati_v7')) || {};
     let targetCaricamento = null;
 
     function salvaDB() {
       try {
-        localStorage.setItem('doc_cantiere_db_v6', JSON.stringify(db));
+        localStorage.setItem('doc_cantiere_db_v7', JSON.stringify(db));
         mostraCantieri();
       } catch (e) {
         alert("⚠️ Memoria del browser esaurita! Elimina qualche vecchio file per liberare spazio.");
@@ -83,7 +84,7 @@
     }
 
     function salvaStati() {
-      localStorage.setItem('doc_cantiere_stati_v6', JSON.stringify(cartelleAperte));
+      localStorage.setItem('doc_cantiere_stati_v7', JSON.stringify(cartelleAperte));
     }
 
     function toggleCartella(id) {
@@ -103,17 +104,19 @@
       }
     }
 
+    // Eliminazione Cantiere con Password
     function eliminaCantiere(id) {
       let cantiere = db.find(c => c.id === id);
       if (!cantiere) return;
-      if (!confirm(`⚠️ Vuoi eliminare il cantiere "${cantiere.nome}"?`)) return;
-      let pwd = prompt("🔒 Inserisci la password per confermare:");
+      if (!confirm(`⚠️ ATTENZIONE: Vuoi davvero eliminare il cantiere "${cantiere.nome}" e TUTTI i documenti al suo interno?`)) return;
+      let pwd = prompt("🔒 Inserisci la password per confermare l'eliminazione:");
       if (pwd !== PASSWORD_ELIMINAZIONE) {
-        alert("❌ Password errata.");
+        alert("❌ Password errata. Eliminazione annullata.");
         return;
       }
       db = db.filter(c => c.id !== id);
       salvaDB();
+      alert("Cantiere eliminato.");
     }
 
     function nuovaSottocartella(cantiereId) {
@@ -130,18 +133,28 @@
       }
     }
 
+    // Eliminazione Sottocartella con Password
     function eliminaSottocartella(cantiereId, subId) {
-      if (!confirm("Vuoi eliminare questa sottocartella e i suoi file?")) return;
       let cantiere = db.find(c => c.id === cantiereId);
-      if (cantiere) {
-        cantiere.sottocartelle = cantiere.sottocartelle.filter(s => s.id !== subId);
-        salvaDB();
+      if (!cantiere) return;
+      let sub = cantiere.sottocartelle.find(s => s.id === subId);
+      if (!sub) return;
+
+      if (!confirm(`⚠️ Vuoi eliminare la sottocartella "${sub.nome}"?`)) return;
+      let pwd = prompt("🔒 Inserisci la password per confermare l'eliminazione:");
+      if (pwd !== PASSWORD_ELIMINAZIONE) {
+        alert("❌ Password errata. Eliminazione annullata.");
+        return;
       }
+      cantiere.sottocartelle = cantiere.sottocartelle.filter(s => s.id !== subId);
+      salvaDB();
     }
 
     function eliminaFile(cantiereId, fileId, subId = null) {
       let cantiere = db.find(c => c.id === cantiereId);
       if (!cantiere) return;
+      if (!confirm("Vuoi eliminare questo file?")) return;
+
       if (subId) {
         let sub = cantiere.sottocartelle.find(s => s.id === subId);
         if (sub) sub.file = sub.file.filter(f => f.id !== fileId);
