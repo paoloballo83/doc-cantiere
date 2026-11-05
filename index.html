@@ -197,7 +197,6 @@
     }
 
     .empty { color: var(--text-sub); font-size: 0.85rem; font-style: italic; margin-top: 6px; text-align: center; }
-    input[type="file"] { display: none; }
   </style>
 </head>
 <body>
@@ -208,18 +207,19 @@
   </header>
 
   <button class="btn" onclick="nuovoCantiere()">➕ Nuovo Cantiere</button>
-  <button class="btn btn-secondary" onclick="apriSelettoreFile()">📸 Aggiungi Foto o PDF</button>
-  <input type="file" id="fileInput" accept="image/*,.pdf" onchange="gestisciFileCaricato(event)">
+  
+  <!-- Input file generico posizionato nel DOM in modo stabile -->
+  <input type="file" id="fileInputGlobale" style="display:none;" accept="image/*,.pdf" onchange="gestisciFileSelezionato(event)">
 
   <div id="listaCantieri"></div>
 
   <script>
     const PASSWORD_ELIMINAZIONE = "1234";
-    let cantieri = JSON.parse(localStorage.getItem('doc_cantiere_salvati_v12')) || [];
-    let cantiereAttivoId = null;
+    let cantieri = JSON.parse(localStorage.getItem('doc_cantiere_salvati_v14')) || [];
+    let cantiereCorrenteId = null;
 
     function salvaDati() {
-      localStorage.setItem('doc_cantiere_salvati_v12', JSON.stringify(cantieri));
+      localStorage.setItem('doc_cantiere_salvati_v14', JSON.stringify(cantieri));
       mostraCantieri();
     }
 
@@ -242,21 +242,11 @@
       salvaDati();
     }
 
-    function apriSelettoreFile() {
-      if (cantieri.length === 0) {
-        alert("Crea prima almeno un cantiere!");
-        return;
-      }
-      let testo = "Scegli il cantiere in cui inserire il file:\n\n" + cantieri.map((c, i) => `${i + 1}. ${c.nome}`).join("\n");
-      let scelta = prompt(testo);
-      let indice = parseInt(scelta) - 1;
-
-      if (!isNaN(indice) && cantieri[indice]) {
-        cantiereAttivoId = cantieri[indice].id;
-        document.getElementById('fileInput').click();
-      } else if (scelta !== null) {
-        alert("Cantiere non valido.");
-      }
+    function avviaCaricamento(idCantiere) {
+      cantiereCorrenteId = idCantiere;
+      let input = document.getElementById('fileInputGlobale');
+      input.value = ''; // Reset per consentire la ri-selezione dello stesso file se necessario
+      input.click();
     }
 
     function ottieniDataOraAttuale() {
@@ -269,44 +259,48 @@
       return `${gg}/${mm}/${aaaa} - ${hh}:${min}`;
     }
 
-    async function gestisciFileCaricato(e) {
-      if (!e.target.files.length || !cantiereAttivoId) return;
-      let file = e.target.files[0];
-      let cantiere = cantieri.find(c => c.id === cantiereAttivoId);
+    function gestisciFileSelezionato(e) {
+      const file = e.target.files[0];
+      if (!file || !cantiereCorrenteId) return;
+
+      const cantiere = cantieri.find(c => c.id === cantiereCorrenteId);
       if (!cantiere) return;
 
-      let dataInserimento = ottieniDataOraAttuale();
+      const dataInserimento = ottieniDataOraAttuale();
+      const reader = new FileReader();
 
       if (file.type.startsWith('image/')) {
-        let reader = new FileReader();
         reader.onload = function(event) {
-          let imgData = event.target.result;
-          let img = new Image();
+          const imgData = event.target.result;
+          const img = new Image();
           img.src = imgData;
           img.onload = function() {
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF();
-            let width = pdf.internal.pageSize.getWidth();
-            let height = (img.height * width) / img.width;
-            pdf.addImage(imgData, 'JPEG', 0, 10, width, height);
-            
-            let pdfDataUri = pdf.output('datauristring');
-            let nomeFile = file.name.replace(/\.[^/.]+$/, "") + ".pdf";
+            try {
+              const { jsPDF } = window.jspdf;
+              const pdf = new jsPDF();
+              const width = pdf.internal.pageSize.getWidth();
+              const height = (img.height * width) / img.width;
+              pdf.addImage(imgData, 'JPEG', 0, 10, width, height);
+              
+              const pdfDataUri = pdf.output('datauristring');
+              const nomeFile = file.name.replace(/\.[^/.]+$/, "") + ".pdf";
 
-            cantiere.files.push({
-              id: Date.now(),
-              nome: nomeFile,
-              dataUrl: pdfDataUri,
-              data: dataInserimento,
-              tipo: 'PDF (Foto)'
-            });
-            salvaDati();
-            alert("✅ Foto convertita in PDF con data e ora salvata!");
-          }
+              cantiere.files.push({
+                id: Date.now(),
+                nome: nomeFile,
+                dataUrl: pdfDataUri,
+                data: dataInserimento,
+                tipo: 'PDF (Foto)'
+              });
+              salvaDati();
+              alert("✅ Foto convertita in PDF e salvata con successo!");
+            } catch (err) {
+              alert("Errore durante la conversione della foto.");
+            }
+          };
         };
         reader.readAsDataURL(file);
-      } else if (file.type === 'application/pdf') {
-        let reader = new FileReader();
+      } else if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
         reader.onload = function(event) {
           cantiere.files.push({
             id: Date.now(),
@@ -320,9 +314,8 @@
         };
         reader.readAsDataURL(file);
       } else {
-        alert("Puoi caricare solo immagini o file PDF.");
+        alert("Formato non supportato. Seleziona un'immagine o un file PDF.");
       }
-      e.target.value = '';
     }
 
     function eliminaFile(cantiereId, fileId) {
@@ -372,10 +365,10 @@
             files: [file]
           }).catch(() => {});
         } catch(e) {
-          alert("Usa l'app per la condivisione nativa.");
+          alert("Errore durante la condivisione.");
         }
       } else {
-        alert("Condivisione non supportata direttamente su questo browser.");
+        alert("La condivisione diretta non è supportata su questo browser.");
       }
     }
 
@@ -398,7 +391,7 @@
             </div>
             
             <div class="folder-content aperta">
-              <button class="btn-sub" onclick="cantiereAttivoId = ${c.id}; document.getElementById('fileInput').click();">📷 + Inserisci File o Foto Qui</button>
+              <button class="btn-sub" onclick="avviaCaricamento(${c.id})">🖼️📁 Aggiungi Foto o PDF qui</button>
               <div class="file-list">
                 ${c.files.length === 0 ? '<div class="empty">Nessun documento inserito</div>' : ''}
                 ${c.files.map(f => `
