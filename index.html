@@ -8,9 +8,9 @@
   
   <style>
     :root {
-      --bg-color: #0f172a;
+      --bg-color: #0b0f19;
       --card-bg: #1e293b;
-      --border-color: #334155;
+      --card-border: #334155;
       --primary: #f97316;
       --primary-hover: #ea580c;
       --accent: #fbbf24;
@@ -34,16 +34,15 @@
       display: flex; 
       align-items: center; 
       justify-content: space-between; 
-      padding-bottom: 16px; 
+      padding-bottom: 14px; 
       border-bottom: 2px solid var(--primary); 
-      margin-bottom: 24px; 
+      margin-bottom: 16px; 
     }
 
     h1 { 
-      font-size: 1.5rem; 
+      font-size: 1.4rem; 
       color: var(--text-main); 
       font-weight: 800; 
-      letter-spacing: -0.5px; 
       display: flex;
       align-items: center;
       gap: 8px;
@@ -52,46 +51,100 @@
     .badge { 
       background: linear-gradient(135deg, var(--primary), var(--accent)); 
       color: #000; 
-      font-size: 0.75rem; 
-      padding: 4px 10px; 
+      font-size: 0.7rem; 
+      padding: 4px 8px; 
       border-radius: 20px; 
       font-weight: 800; 
       text-transform: uppercase;
     }
     
-    .btn { 
+    .btn-main { 
       background: linear-gradient(135deg, var(--primary), var(--primary-hover)); 
       color: white; 
       border: none; 
-      padding: 14px 18px; 
-      border-radius: 12px; 
-      font-size: 1rem; 
-      font-weight: 700; 
+      padding: 16px; 
+      border-radius: 14px; 
+      font-size: 1.05rem; 
+      font-weight: 800; 
       width: 100%; 
       cursor: pointer; 
       display: flex; 
       align-items: center; 
       justify-content: center; 
       gap: 10px; 
-      margin-bottom: 14px; 
-      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25); 
+      box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3); 
     }
-    
-    .btn:active { transform: scale(0.98); }
+    .btn-main:active { transform: scale(0.98); }
 
-    .btn-secondary {
-      background: #334155;
-      color: var(--accent);
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    /* DASHBOARD STATISTICHE E DATA */
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 16px 0 20px 0;
     }
-    
+
+    .dash-card {
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .dash-full {
+      grid-column: span 2;
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9));
+      border: 1px solid rgba(249, 115, 22, 0.3);
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .dash-title { font-size: 0.75rem; color: var(--text-sub); font-weight: 600; text-transform: uppercase; }
+    .dash-value { font-size: 1.3rem; color: var(--accent); font-weight: 800; margin-top: 2px; }
+    .dash-clock { font-size: 0.9rem; color: var(--text-main); font-weight: 700; }
+
+    /* FORM CREAZIONE CANTIERE MODALE */
+    .modal-add {
+      display: none;
+      background: var(--card-bg);
+      border: 1px solid var(--primary);
+      padding: 14px;
+      border-radius: 14px;
+      margin-bottom: 16px;
+      gap: 10px;
+      flex-direction: column;
+    }
+
+    .modal-add.attiva { display: flex; }
+
+    .input-text {
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      color: #fff;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      width: 100%;
+    }
+
+    .input-text:focus { outline: none; border-color: var(--primary); }
+
+    .modal-actions { display: flex; gap: 8px; }
+    .btn-confirm { background: var(--whatsapp); color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; flex: 1; cursor: pointer; }
+    .btn-cancel { background: var(--danger); color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; flex: 1; cursor: pointer; }
+
+    /* SCHEDE CANTIERI */
     .folder-card { 
       background: var(--card-bg); 
-      border: 1px solid var(--border-color); 
+      border: 1px solid var(--card-border); 
       border-radius: 16px; 
       padding: 16px; 
-      margin-bottom: 18px; 
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); 
+      margin-bottom: 16px; 
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4); 
     }
 
     .folder-header { 
@@ -99,7 +152,7 @@
       align-items: center; 
       justify-content: space-between; 
       font-weight: 700; 
-      font-size: 1.15rem; 
+      font-size: 1.1rem; 
       color: var(--text-main); 
     }
 
@@ -112,22 +165,20 @@
     }
 
     .folder-content { 
-      display: none; 
-      margin-top: 14px; 
-      border-top: 1px solid var(--border-color); 
+      display: block; 
+      margin-top: 12px; 
+      border-top: 1px solid var(--card-border); 
       padding-top: 12px; 
     }
-
-    .folder-content.aperta { display: block; }
     
     .file-list { margin-top: 10px; }
 
     .file-item { 
       display: flex; 
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
       padding: 12px; 
-      background: rgba(15, 23, 42, 0.6);
+      background: rgba(15, 23, 42, 0.7);
       border: 1px solid rgba(255, 255, 255, 0.05);
       border-radius: 10px;
       margin-bottom: 8px;
@@ -145,17 +196,11 @@
       font-weight: 600;
       font-size: 0.95rem; 
       word-break: break-all;
-      display: flex;
-      align-items: center;
-      gap: 6px;
     }
 
     .file-date {
       font-size: 0.75rem;
       color: var(--text-sub);
-      display: flex;
-      align-items: center;
-      gap: 4px;
     }
     
     .file-actions { 
@@ -172,27 +217,28 @@
       padding: 8px 12px; 
       border-radius: 8px; 
       font-size: 0.8rem; 
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer; 
       display: inline-flex; 
       align-items: center; 
-      gap: 6px; 
+      gap: 4px; 
     }
 
     .btn-whatsapp { background: var(--whatsapp); }
     .btn-email { background: var(--email); }
-    .btn-delete { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); padding: 6px 10px; border-radius: 8px; }
+    .btn-delete { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.4); padding: 6px 10px; border-radius: 8px; font-size: 0.8rem; }
     
     .btn-sub { 
       background: #0f172a; 
       border: 1px dashed var(--primary); 
       font-size: 0.85rem; 
-      padding: 10px 14px; 
+      padding: 12px; 
       width: 100%; 
       margin-top: 6px; 
       color: var(--primary); 
       border-radius: 10px;
-      font-weight: 600;
+      font-weight: 700;
+      cursor: pointer;
     }
 
     .empty { color: var(--text-sub); font-size: 0.85rem; font-style: italic; margin-top: 6px; text-align: center; }
@@ -205,37 +251,92 @@
     <span class="badge">PRO</span>
   </header>
 
-  <button class="btn" onclick="nuovoCantiere()">➕ Nuovo Cantiere</button>
-  
+  <!-- Pulsante Principale -->
+  <button class="btn-main" onclick="mostraFormCantiere()">➕ Nuovo Cantiere</button>
+
+  <!-- Form Inserimento Nuovo Cantiere -->
+  <div id="formCantiere" class="modal-add">
+    <input type="text" id="nomeCantiereInput" class="input-text" placeholder="Inserisci nome cantiere (es. Via Roma 12)...">
+    <div class="modal-actions">
+      <button class="btn-confirm" onclick="confermaNuovoCantiere()">Salva Cantiere</button>
+      <button class="btn-cancel" onclick="nascondiFormCantiere()">Annulla</button>
+    </div>
+  </div>
+
+  <!-- Dashboard Statistche & Data -->
+  <div class="dashboard">
+    <div class="dash-card dash-full">
+      <div>
+        <div class="dash-title">📅 Data & Ora</div>
+        <div class="dash-clock" id="clockBox">--/--/---- --:--</div>
+      </div>
+      <span style="font-size: 1.5rem;">⏱️</span>
+    </div>
+    <div class="dash-card">
+      <div class="dash-title">📂 Cantieri</div>
+      <div class="dash-value" id="cntCantieri">0</div>
+    </div>
+    <div class="dash-card">
+      <div class="dash-title">📄 File Totali</div>
+      <div class="dash-value" id="cntFile">0</div>
+    </div>
+  </div>
+
   <input type="file" id="fileInputGlobale" style="display:none;" accept="image/*,.pdf" onchange="gestisciFileSelezionato(event)">
 
+  <!-- Lista Cantieri Aperti -->
   <div id="listaCantieri"></div>
 
   <script>
-    const PASSWORD_ELIMINAZIONE = "1234";
-    let cantieri = JSON.parse(localStorage.getItem('doc_cantiere_salvati_v15')) || [];
+    let cantieri = JSON.parse(localStorage.getItem('doc_cantiere_salvati_v16')) || [];
     let cantiereCorrenteId = null;
 
+    // Gestione Orologio in Tempo Reale
+    function aggiornaOrologio() {
+      const ora = new Date();
+      const giorni = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+      const nomeGiorno = giorni[ora.getDay()];
+      const gg = String(ora.getDate()).padStart(2, '0');
+      const mm = String(ora.getMonth() + 1).padStart(2, '0');
+      const aaaa = ora.getFullYear();
+      const hh = String(ora.getHours()).padStart(2, '0');
+      const min = String(ora.getMinutes()).padStart(2, '0');
+      const sec = String(ora.getSeconds()).padStart(2, '0');
+
+      document.getElementById('clockBox').innerText = `${nomeGiorno} ${gg}/${mm}/${aaaa} - ${hh}:${min}:${sec}`;
+    }
+    setInterval(aggiornaOrologio, 1000);
+    aggiornaOrologio();
+
     function salvaDati() {
-      localStorage.setItem('doc_cantiere_salvati_v15', JSON.stringify(cantieri));
+      localStorage.setItem('doc_cantiere_salvati_v16', JSON.stringify(cantieri));
       mostraCantieri();
     }
 
-    function nuovoCantiere() {
-      let nome = prompt("Nome del cantiere (es. Via Roma 12):");
-      if (nome && nome.trim() !== "") {
-        cantieri.push({ id: Date.now(), nome: nome.trim(), files: [] });
+    function mostraFormCantiere() {
+      document.getElementById('formCantiere').classList.add('attiva');
+      document.getElementById('nomeCantiereInput').focus();
+    }
+
+    function nascondiFormCantiere() {
+      document.getElementById('formCantiere').classList.remove('attiva');
+      document.getElementById('nomeCantiereInput').value = '';
+    }
+
+    function confermaNuovoCantiere() {
+      let input = document.getElementById('nomeCantiereInput');
+      let nome = input.value.trim();
+      if (nome !== "") {
+        cantieri.push({ id: Date.now(), nome: nome, files: [] });
         salvaDati();
+        nascondiFormCantiere();
+      } else {
+        alert("Inserisci un nome valido per il cantiere.");
       }
     }
 
     function eliminaCantiere(id) {
-      if (!confirm("Vuoi eliminare questo cantiere?")) return;
-      let pwd = prompt("🔒 Inserisci la password (1234):");
-      if (pwd !== PASSWORD_ELIMINAZIONE) {
-        alert("❌ Password errata.");
-        return;
-      }
+      if (!confirm("Vuoi eliminare questo cantiere e tutti i suoi file?")) return;
       cantieri = cantieri.filter(c => c.id !== id);
       salvaDati();
     }
@@ -244,3 +345,184 @@
       cantiereCorrenteId = idCantiere;
       let input = document.getElementById('fileInputGlobale');
       input.value = '';
+      input.click();
+    }
+
+    function gestisciFileSelezionato(e) {
+      const file = e.target.files[0];
+      if (!file || !cantiereCorrenteId) return;
+
+      const cantiere = cantieri.find(c => c.id === cantiereCorrenteId);
+      if (!cantiere) return;
+
+      const ora = new Date();
+      const dataStr = `${String(ora.getDate()).padStart(2, '0')}/${String(ora.getMonth() + 1).padStart(2, '0')}/${ora.getFullYear()} - ${String(ora.getHours()).padStart(2, '0')}:${String(ora.getMinutes()).padStart(2, '0')}`;
+
+      const reader = new FileReader();
+
+      if (file.type.startsWith('image/')) {
+        reader.onload = function(event) {
+          const imgData = event.target.result;
+          const img = new Image();
+          img.src = imgData;
+          img.onload = function() {
+            try {
+              const { jsPDF } = window.jspdf;
+              const pdf = new jsPDF();
+              const pageWidth = pdf.internal.pageSize.getWidth();
+              const pageHeight = pdf.internal.pageSize.getHeight();
+              
+              let width = pageWidth - 20;
+              let height = (img.height * width) / img.width;
+              if (height > pageHeight - 30) {
+                height = pageHeight - 30;
+                width = (img.width * height) / img.height;
+              }
+              
+              pdf.setFontSize(12);
+              pdf.text("DocCantiere - Foto Documento", 10, 10);
+              pdf.addImage(imgData, 'JPEG', 10, 15, width, height);
+              
+              const pdfBase64 = pdf.output('datauristring');
+              const nomeFile = file.name.replace(/\.[^/.]+$/, "") + ".pdf";
+
+              cantiere.files.push({
+                id: Date.now(),
+                nome: nomeFile,
+                dataUrl: pdfBase64,
+                data: dataStr
+              });
+              salvaDati();
+              alert("✅ Foto convertita in PDF e salvata!");
+            } catch (err) {
+              alert("Errore durante la conversione della foto.");
+            }
+          };
+        };
+        reader.readAsDataURL(file);
+      } else {
+        reader.onload = function(event) {
+          cantiere.files.push({
+            id: Date.now(),
+            nome: file.name,
+            dataUrl: event.target.result,
+            data: dataStr
+          });
+          salvaDati();
+          alert("✅ Documento PDF salvato con successo!");
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function eliminaFile(cantiereId, fileId) {
+      if (!confirm("Eliminare questo file?")) return;
+      let cantiere = cantieri.find(c => c.id === cantiereId);
+      if (cantiere) {
+        cantiere.files = cantiere.files.filter(f => f.id !== fileId);
+        salvaDati();
+      }
+    }
+
+    function apriFile(dataUrl, nomeFile) {
+      try {
+        let arr = dataUrl.split(',');
+        let mime = arr[0].match(/:(.*?);/)[1];
+        let bstr = atob(arr[1]);
+        let n = bstr.length;
+        let u8arr = new Uint8Array(n);
+        while(n--) { u8arr[n] = bstr.charCodeAt(n); }
+        let blob = new Blob([u8arr], {type: mime});
+        
+        let blobUrl = URL.createObjectURL(blob);
+        let a = document.createElement('a');
+        a.href = blobUrl;
+        a.target = '_blank';
+        a.download = nomeFile;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } catch(e) {
+        alert("Impossibile aprire il file.");
+      }
+    }
+
+    function condividiFile(nomeFile, dataUrl) {
+      try {
+        let arr = dataUrl.split(',');
+        let mime = arr[0].match(/:(.*?);/)[1];
+        let bstr = atob(arr[1]);
+        let n = bstr.length;
+        let u8arr = new Uint8Array(n);
+        while(n--) { u8arr[n] = bstr.charCodeAt(n); }
+        let blob = new Blob([u8arr], {type: mime});
+        let file = new File([blob], nomeFile, { type: "application/pdf" });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          navigator.share({
+            title: 'DocCantiere',
+            text: `Documento cantiere: ${nomeFile}`,
+            files: [file]
+          }).catch(() => {});
+        } else {
+          apriFile(dataUrl, nomeFile);
+          alert("File scaricato! Puoi allegarlo direttamente via WhatsApp o Email.");
+        }
+      } catch(e) {
+        alert("Errore di condivisione.");
+      }
+    }
+
+    function mostraCantieri() {
+      let container = document.getElementById('listaCantieri');
+      container.innerHTML = '';
+
+      // Aggiorna Contatori Dashboard
+      document.getElementById('cntCantieri').innerText = cantieri.length;
+      let totaleFile = cantieri.reduce((acc, c) => acc + c.files.length, 0);
+      document.getElementById('cntFile').innerText = totaleFile;
+
+      if (cantieri.length === 0) {
+        container.innerHTML = '<div class="empty" style="padding: 30px 0;">Nessun cantiere aperto.<br>Clicca su "Nuovo Cantiere" per iniziare.</div>';
+        return;
+      }
+
+      cantieri.forEach(c => {
+        let html = `
+          <div class="folder-card">
+            <div class="folder-header">
+              <div class="folder-title">
+                <span>📁</span> <span>${c.nome}</span>
+              </div>
+              <button class="btn-delete" onclick="eliminaCantiere(${c.id})">🗑️</button>
+            </div>
+            
+            <div class="folder-content">
+              <button class="btn-sub" onclick="avviaCaricamento(${c.id})">📸📄 Aggiungi Foto o PDF</button>
+              <div class="file-list">
+                ${c.files.length === 0 ? '<div class="empty">Nessun documento presente</div>' : ''}
+                ${c.files.map(f => `
+                  <div class="file-item">
+                    <div class="file-main-info">
+                      <span class="file-name" onclick="apriFile('${f.dataUrl}', '${f.nome}')">📄 ${f.nome}</span>
+                      <button class="btn-delete" onclick="eliminaFile(${c.id}, ${f.id})">🗑️</button>
+                    </div>
+                    <div class="file-date">📅 Caricato il: ${f.data}</div>
+                    <div class="file-actions">
+                      <button class="btn-action btn-whatsapp" onclick="condividiFile('${f.nome}', '${f.dataUrl}')">💬 WhatsApp</button>
+                      <button class="btn-action btn-email" onclick="condividiFile('${f.nome}', '${f.dataUrl}')">✉️ Email</button>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+        container.innerHTML += html;
+      });
+    }
+
+    mostraCantieri();
+  </script>
+</body>
+</html>
