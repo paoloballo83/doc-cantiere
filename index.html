@@ -297,7 +297,7 @@
   <div id="listaCantieri"></div>
 
   <script>
-    let cantieri = JSON.parse(localStorage.getItem('doc_cantiere_salvati_v19')) || [];
+    let cantieri = JSON.parse(localStorage.getItem('doc_cantiere_salvati_v22')) || [];
     let cantiereCorrenteId = null;
 
     function aggiornaOrologio() {
@@ -317,7 +317,7 @@
     aggiornaOrologio();
 
     function salvaDati() {
-      localStorage.setItem('doc_cantiere_salvati_v19', JSON.stringify(cantieri));
+      localStorage.setItem('doc_cantiere_salvati_v22', JSON.stringify(cantieri));
       mostraCantieri();
     }
 
@@ -343,10 +343,57 @@
       }
     }
 
-    function eliminaCantiere(id) {
-      if (!confirm("Vuoi eliminare questo cantiere e i suoi file?")) return;
+    // Funzione di autenticazione biometrica (Impronta Digitale) con fallback a PIN (1234)
+    async function verificaAutorizzazione() {
+      try {
+        // Verifica se il browser/dispositivo supporta l'autenticazione biometrica
+        if (window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
+          const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+          if (available) {
+            // Genera una richiesta di autenticazione basata su piattaforma (impronta / volto)
+            const challenge = new Uint8Array(32);
+            window.crypto.getRandomValues(challenge);
+            
+            await navigator.credentials.get({
+              publicKey: {
+                challenge: challenge,
+                timeout: 60000,
+                userVerification: "required"
+              }
+            });
+            return true; // Impronta verificata con successo!
+          }
+        }
+      } catch (err) {
+        // Se l'utente annulla l'impronta o si verifica un blocco, passa al fallback
+      }
+
+      // Fallback di sicurezza con PIN numerico se l'impronta fallisce o non è configurata
+      let pwd = prompt("🔒 Impronta non rilevata o non disponibile.\nInserisci la password di sicurezza (1234):");
+      return pwd === "1234";
+    }
+
+    async function eliminaCantiere(id) {
+      let autorizzato = await verificaAutorizzazione();
+      if (!autorizzato) {
+        alert("❌ Autenticazione fallita. Eliminazione annullata.");
+        return;
+      }
       cantieri = cantieri.filter(c => c.id !== id);
       salvaDati();
+    }
+
+    async function eliminaFile(cantiereId, fileId) {
+      let autorizzato = await verificaAutorizzazione();
+      if (!autorizzato) {
+        alert("❌ Autenticazione fallita. Eliminazione annullata.");
+        return;
+      }
+      let cantiere = cantieri.find(c => c.id === cantiereId);
+      if (cantiere) {
+        cantiere.files = cantiere.files.filter(f => f.id !== fileId);
+        salvaDati();
+      }
     }
 
     function avviaCaricamento(idCantiere) {
@@ -414,15 +461,6 @@
       }
     }
 
-    function eliminaFile(cantiereId, fileId) {
-      if (!confirm("Eliminare questo file?")) return;
-      let cantiere = cantieri.find(c => c.id === cantiereId);
-      if (cantiere) {
-        cantiere.files = cantiere.files.filter(f => f.id !== fileId);
-        salvaDati();
-      }
-    }
-
     function apriFile(f) {
       if (f.isFoto) {
         let win = window.open();
@@ -444,21 +482,35 @@
       }
     }
 
-    function condividiFile(f) {
-      try {
-        const { jsPDF } = window.jspdf;
-        let fileCondivisione;
+    function condividiViaWhatsApp(f) {
+      scaricaFileLocale(f);
+      setTimeout(() => {
+        let testo = encodeURIComponent(`Invio documento cantiere: ${f.nome} (Caricato il ${f.data})`);
+        window.open(`https://api.whatsapp.com/send?text=${testo}`, '_blank');
+      }, 500);
+    }
 
+    function condividiViaEmail(f) {
+      scaricaFileLocale(f);
+      setTimeout(() => {
+        let oggetto = encodeURIComponent(`Documento Cantiere: ${f.nome}`);
+        let corpo = encodeURIComponent(`In allegato il documento del cantiere.\n\n(Il file "${f.nome}" è stato scaricato nella cartella Download del telefono, puoi allegarlo subito).`);
+        window.location.href = `mailto:?subject=${oggetto}&body=${corpo}`;
+      }, 500);
+    }
+
+    function scaricaFileLocale(f) {
+      try {
+        let blob, nomeScaricato;
         if (f.isFoto) {
+          const { jsPDF } = window.jspdf;
           const pdf = new jsPDF();
           pdf.setFontSize(12);
           pdf.text(`DocCantiere - Foto: ${f.nome}`, 10, 10);
           pdf.text(`Data caricamento: ${f.data}`, 10, 16);
           pdf.addImage(f.dataUrl, 'JPEG', 10, 22, 190, 0);
-          
-          const blob = pdf.output('blob');
-          const nomePdf = f.nome.replace(/\.[^/.]+$/, "") + ".pdf";
-          fileCondivisione = new File([blob], nomePdf, { type: "application/pdf" });
+          blob = pdf.output('blob');
+          nomeScaricato = f.nome.replace(/\.[^/.]+$/, "") + ".pdf";
         } else {
           let arr = f.dataUrl.split(',');
           let mime = arr[0].match(/:(.*?);/)[1];
@@ -466,21 +518,19 @@
           let n = bstr.length;
           let u8arr = new Uint8Array(n);
           while(n--) { u8arr[n] = bstr.charCodeAt(n); }
-          let blob = new Blob([u8arr], {type: mime});
-          fileCondivisione = new File([blob], f.nome, { type: mime });
+          blob = new Blob([u8arr], {type: mime});
+          nomeScaricato = f.nome;
         }
 
-        if (navigator.canShare && navigator.canShare({ files: [fileCondivisione] })) {
-          navigator.share({
-            title: 'DocCantiere',
-            text: `Documento cantiere: ${f.nome}`,
-            files: [fileCondivisione]
-          }).catch(() => {});
-        } else {
-          alert("Condivisione diretta non supportata dal browser corrente.");
-        }
+        let blobUrl = URL.createObjectURL(blob);
+        let a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = nomeScaricato;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
       } catch(e) {
-        alert("Errore durante la preparazione del file.");
+        alert("Errore nel salvataggio del file.");
       }
     }
 
@@ -531,17 +581,23 @@
 
         const blob = pdf.output('blob');
         const nomeReport = `Backup_DocCantiere_${Date.now()}.pdf`;
-        const fileBackup = new File([blob], nomeReport, { type: "application/pdf" });
+        
+        let blobUrl = URL.createObjectURL(blob);
+        let a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = nomeReport;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
 
-        if (navigator.canShare && navigator.canShare({ files: [fileBackup] })) {
-          navigator.share({
-            title: 'Backup DocCantiere',
-            text: 'In allegato il report completo dei cantieri.',
-            files: [fileBackup]
-          }).catch(() => {});
-        } else {
-          alert("Backup generato. Utilizza un dispositivo mobile per inviarlo via email.");
-        }
+        alert("📦 Backup PDF scaricato nella cartella Download! Ora si apre l'email.");
+        
+        setTimeout(() => {
+          let oggetto = encodeURIComponent("Backup Generale DocCantiere");
+          let corpo = encodeURIComponent("In allegato il report generale dei cantieri (il file PDF è salvato nella cartella Download del telefono).");
+          window.location.href = `mailto:?subject=${oggetto}&body=${corpo}`;
+        }, 1000);
+
       } catch (err) {
         alert("Errore nella creazione del backup.");
       }
@@ -583,8 +639,8 @@
                     ${f.isFoto ? `<img src="${f.dataUrl}" class="img-preview" onclick='apriFile(${JSON.stringify(f)})'>` : ''}
                     <div class="file-date">📅 Caricato: ${f.data}</div>
                     <div class="file-actions">
-                      <button class="btn-action btn-whatsapp" onclick='condividiFile(${JSON.stringify(f)})'>💬 WhatsApp</button>
-                      <button class="btn-action btn-email" onclick='condividiFile(${JSON.stringify(f)})'>✉️ Email</button>
+                      <button class="btn-action btn-whatsapp" onclick='condividiViaWhatsApp(${JSON.stringify(f)})'>💬 WhatsApp</button>
+                      <button class="btn-action btn-email" onclick='condividiViaEmail(${JSON.stringify(f)})'>✉️ Email</button>
                     </div>
                   </div>
                 `).join('')}
