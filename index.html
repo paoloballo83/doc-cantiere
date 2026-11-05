@@ -118,3 +118,201 @@
       display: none;
       background: var(--card-bg);
       border: 1px solid var(--primary);
+      padding: 14px;
+      border-radius: 14px;
+      margin-bottom: 16px;
+      gap: 10px;
+      flex-direction: column;
+    }
+
+    .modal-add.attiva { display: flex; }
+
+    .input-text {
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      color: #fff;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      width: 100%;
+    }
+
+    .modal-actions { display: flex; gap: 8px; }
+    .btn-confirm { background: var(--whatsapp); color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; flex: 1; cursor: pointer; }
+    .btn-cancel { background: var(--danger); color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; flex: 1; cursor: pointer; }
+
+    .folder-card { 
+      background: var(--card-bg); 
+      border: 1px solid var(--card-border); 
+      border-radius: 16px; 
+      padding: 16px; 
+      margin-bottom: 16px; 
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4); 
+    }
+
+    .folder-header { 
+      display: flex; 
+      align-items: center; 
+      justify-content: space-between; 
+      font-weight: 700; 
+      font-size: 1.1rem; 
+      color: var(--text-main); 
+    }
+
+    .folder-title { 
+      display: flex; 
+      align-items: center; 
+      gap: 10px; 
+      flex-grow: 1; 
+    }
+
+    .folder-content { 
+      display: block; 
+      margin-top: 12px; 
+      border-top: 1px solid var(--card-border); 
+      padding-top: 12px; 
+    }
+    
+    .file-list { margin-top: 10px; }
+
+    .file-item { 
+      display: flex; 
+      flex-direction: column;
+      gap: 6px;
+      padding: 12px; 
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      margin-bottom: 8px;
+    }
+
+    .file-main-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .file-name { 
+      cursor: pointer; 
+      color: var(--accent); 
+      font-weight: 600;
+      font-size: 0.95rem; 
+      word-break: break-all;
+    }
+
+    .img-preview {
+      width: 100%;
+      max-height: 180px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-top: 4px;
+      border: 1px solid var(--card-border);
+      cursor: pointer;
+      background: #fff;
+    }
+
+    .file-date {
+      font-size: 0.75rem;
+      color: var(--text-sub);
+    }
+    
+    .file-actions { 
+      display: flex; 
+      align-items: center; 
+      justify-content: flex-end;
+      gap: 8px; 
+      margin-top: 6px;
+    }
+
+    .btn-action { 
+      border: none; 
+      color: #fff; 
+      padding: 10px 14px; 
+      border-radius: 8px; 
+      font-size: 0.85rem; 
+      font-weight: 700;
+      cursor: pointer; 
+      display: inline-flex; 
+      align-items: center; 
+      justify-content: center;
+      gap: 6px; 
+      flex: 1;
+    }
+
+    .btn-whatsapp { background: var(--whatsapp); }
+    .btn-email { background: var(--email); }
+    .btn-delete { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.4); padding: 6px 10px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; flex: none; }
+    
+    .btn-sub { 
+      background: #0f172a; 
+      border: 1px dashed var(--primary); 
+      font-size: 0.85rem; 
+      padding: 12px; 
+      width: 100%; 
+      margin-top: 6px; 
+      color: var(--primary); 
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .empty { color: var(--text-sub); font-size: 0.85rem; font-style: italic; margin-top: 6px; text-align: center; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🏗️ DocCantiere</h1>
+    <span class="badge">PRO</span>
+  </header>
+
+  <button class="btn-main" onclick="mostraFormCantiere()">➕ Nuovo Cantiere</button>
+  <button class="btn-main btn-backup" onclick="eseguiBackupPDF()">📦 Backup PDF e Invia Email</button>
+
+  <div id="formCantiere" class="modal-add">
+    <input type="text" id="nomeCantiereInput" class="input-text" placeholder="Nome cantiere (es. Via Roma 12)...">
+    <div class="modal-actions">
+      <button class="btn-confirm" onclick="confermaNuovoCantiere()">Salva</button>
+      <button class="btn-cancel" onclick="nascondiFormCantiere()">Annulla</button>
+    </div>
+  </div>
+
+  <div class="dashboard">
+    <div class="dash-card dash-full">
+      <div>
+        <div class="dash-title">📅 Data & Ora</div>
+        <div class="dash-clock" id="clockBox">--/--/---- --:--</div>
+      </div>
+      <span style="font-size: 1.4rem;">⏱️</span>
+    </div>
+    <div class="dash-card">
+      <div class="dash-title">📂 Cantieri</div>
+      <div class="dash-value" id="cntCantieri">0</div>
+    </div>
+    <div class="dash-card">
+      <div class="dash-title">📄 File Totali</div>
+      <div class="dash-value" id="cntFile">0</div>
+    </div>
+  </div>
+
+  <input type="file" id="fileInputGlobale" style="display:none;" accept="image/*,.pdf" onchange="gestisciFileSelezionato(event)">
+
+  <div id="listaCantieri"></div>
+
+  <script>
+    const PASSWORD_SICUREZZA = "1234";
+    let cantieri = JSON.parse(localStorage.getItem('doc_cantiere_salvati_v28')) || [];
+    let cantiereCorrenteId = null;
+
+    function aggiornaOrologio() {
+      const ora = new Date();
+      const giorni = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+      const nomeGiorno = giorni[ora.getDay()];
+      const gg = String(ora.getDate()).padStart(2, '0');
+      const mm = String(ora.getMonth() + 1).padStart(2, '0');
+      const aaaa = ora.getFullYear();
+      const hh = String(ora.getHours()).padStart(2, '0');
+      const min = String(ora.getMinutes()).padStart(2, '0');
+      const sec = String(ora.getSeconds()).padStart(2, '0');
+
+      document.getElementById('clockBox').innerText =
