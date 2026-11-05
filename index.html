@@ -3,38 +3,200 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DocCantiere Semplice</title>
-  <!-- Libreria per convertire le immagini in PDF direttamente sul telefono -->
+  <title>DocCantiere Pro</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   
   <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --border-color: #334155;
+      --primary: #f97316;
+      --primary-hover: #ea580c;
+      --accent: #fbbf24;
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+      --whatsapp: #22c55e;
+      --email: #3b82f6;
+      --danger: #ef4444;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: #121212; color: #f3f4f6; padding: 16px; padding-bottom: 80px; }
-    header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 16px; border-bottom: 2px solid #ea580c; margin-bottom: 20px; }
-    h1 { font-size: 1.4rem; color: #ffffff; font-weight: 700; }
-    .badge { background: #ea580c; color: #fff; font-size: 0.75rem; padding: 4px 8px; border-radius: 12px; font-weight: 600; }
     
-    .btn { background: #ea580c; color: white; border: none; padding: 14px 16px; border-radius: 10px; font-size: 1rem; font-weight: 600; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-    .btn:active { background: #c2410c; }
+    body { 
+      background-color: var(--bg-color); 
+      color: var(--text-main); 
+      padding: 16px; 
+      padding-bottom: 90px; 
+    }
+
+    header { 
+      display: flex; 
+      align-items: center; 
+      justify-content: space-between; 
+      padding-bottom: 16px; 
+      border-bottom: 2px solid var(--primary); 
+      margin-bottom: 24px; 
+    }
+
+    h1 { 
+      font-size: 1.5rem; 
+      color: var(--text-main); 
+      font-weight: 800; 
+      letter-spacing: -0.5px; 
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge { 
+      background: linear-gradient(135deg, var(--primary), var(--accent)); 
+      color: #000; 
+      font-size: 0.75rem; 
+      padding: 4px 10px; 
+      border-radius: 20px; 
+      font-weight: 800; 
+      text-transform: uppercase;
+    }
     
-    .folder-card { background: #1e1e1e; border: 1px solid #333333; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-    .folder-header { display: flex; align-items: center; justify-content: space-between; font-weight: 600; font-size: 1.1rem; color: #fff; cursor: pointer; }
-    .folder-title { display: flex; align-items: center; gap: 8px; flex-grow: 1; }
-    .folder-content { display: none; margin-top: 12px; border-top: 1px solid #333333; padding-top: 10px; }
+    .btn { 
+      background: linear-gradient(135deg, var(--primary), var(--primary-hover)); 
+      color: white; 
+      border: none; 
+      padding: 14px 18px; 
+      border-radius: 12px; 
+      font-size: 1rem; 
+      font-weight: 700; 
+      width: 100%; 
+      cursor: pointer; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      gap: 10px; 
+      margin-bottom: 14px; 
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25); 
+      transition: all 0.2s ease;
+    }
+    
+    .btn:active { transform: scale(0.98); }
+
+    .btn-secondary {
+      background: #334155;
+      color: var(--accent);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    
+    .folder-card { 
+      background: var(--card-bg); 
+      border: 1px solid var(--border-color); 
+      border-radius: 16px; 
+      padding: 16px; 
+      margin-bottom: 18px; 
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); 
+    }
+
+    .folder-header { 
+      display: flex; 
+      align-items: center; 
+      justify-content: space-between; 
+      font-weight: 700; 
+      font-size: 1.15rem; 
+      color: var(--text-main); 
+    }
+
+    .folder-title { 
+      display: flex; 
+      align-items: center; 
+      gap: 10px; 
+      flex-grow: 1; 
+      cursor: pointer;
+    }
+
+    .folder-content { 
+      display: none; 
+      margin-top: 14px; 
+      border-top: 1px solid var(--border-color); 
+      padding-top: 12px; 
+    }
+
     .folder-content.aperta { display: block; }
     
-    .file-list { margin-top: 8px; }
-    .file-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #2a2a2a; font-size: 0.9rem; color: #e5e7eb; }
-    .file-name { cursor: pointer; color: #fb923c; text-decoration: underline; flex-grow: 1; margin-right: 8px; word-break: break-all; }
+    .file-list { margin-top: 10px; }
+
+    .file-item { 
+      display: flex; 
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px; 
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      margin-bottom: 8px;
+    }
+
+    .file-main-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .file-name { 
+      cursor: pointer; 
+      color: var(--accent); 
+      font-weight: 600;
+      font-size: 0.95rem; 
+      word-break: break-all;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .file-date {
+      font-size: 0.75rem;
+      color: var(--text-sub);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
     
-    .file-actions { display: flex; align-items: center; gap: 8px; }
-    .btn-action { background: #2d2d2d; border: 1px solid #444; color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
-    .btn-whatsapp { background: #15803d; border: none; }
-    .btn-email { background: #1e3a8a; border: none; }
-    .btn-delete { background: none; border: none; color: #ef4444; font-size: 1rem; cursor: pointer; padding: 4px; }
+    .file-actions { 
+      display: flex; 
+      align-items: center; 
+      justify-content: flex-end;
+      gap: 8px; 
+      margin-top: 4px;
+    }
+
+    .btn-action { 
+      border: none; 
+      color: #fff; 
+      padding: 8px 12px; 
+      border-radius: 8px; 
+      font-size: 0.8rem; 
+      font-weight: 600;
+      cursor: pointer; 
+      display: inline-flex; 
+      align-items: center; 
+      gap: 6px; 
+    }
+
+    .btn-whatsapp { background: var(--whatsapp); }
+    .btn-email { background: var(--email); }
+    .btn-delete { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); padding: 6px 10px; border-radius: 8px; }
     
-    .btn-sub { background: #2d2d2d; border: 1px solid #444; font-size: 0.85rem; padding: 8px 12px; width: auto; margin-top: 6px; color: #fff; }
-    .empty { color: #888888; font-size: 0.85rem; font-style: italic; margin-top: 6px; }
+    .btn-sub { 
+      background: #0f172a; 
+      border: 1px dashed var(--primary); 
+      font-size: 0.85rem; 
+      padding: 10px 14px; 
+      width: 100%; 
+      margin-top: 6px; 
+      color: var(--primary); 
+      border-radius: 10px;
+      font-weight: 600;
+    }
+
+    .empty { color: var(--text-sub); font-size: 0.85rem; font-style: italic; margin-top: 6px; text-align: center; }
     input[type="file"] { display: none; }
   </style>
 </head>
@@ -42,22 +204,22 @@
 
   <header>
     <h1>🏗️ DocCantiere</h1>
-    <span class="badge">No Limits</span>
+    <span class="badge">PRO</span>
   </header>
 
   <button class="btn" onclick="nuovoCantiere()">➕ Nuovo Cantiere</button>
-  <button class="btn" style="background:#ca8a04;" onclick="apriSelettoreFile()">📷 Aggiungi Foto o PDF</button>
+  <button class="btn btn-secondary" onclick="apriSelettoreFile()">📸 Aggiungi Foto o PDF</button>
   <input type="file" id="fileInput" accept="image/*,.pdf" onchange="gestisciFileCaricato(event)">
 
   <div id="listaCantieri"></div>
 
   <script>
     const PASSWORD_ELIMINAZIONE = "1234";
-    let cantieri = JSON.parse(localStorage.getItem('doc_cantiere_salvati_v11')) || [];
+    let cantieri = JSON.parse(localStorage.getItem('doc_cantiere_salvati_v12')) || [];
     let cantiereAttivoId = null;
 
     function salvaDati() {
-      localStorage.setItem('doc_cantiere_salvati_v11', JSON.stringify(cantieri));
+      localStorage.setItem('doc_cantiere_salvati_v12', JSON.stringify(cantieri));
       mostraCantieri();
     }
 
@@ -97,14 +259,25 @@
       }
     }
 
+    function ottieniDataOraAttuale() {
+      const ora = new Date();
+      const gg = String(ora.getDate()).padStart(2, '0');
+      const mm = String(ora.getMonth() + 1).padStart(2, '0');
+      const aaaa = ora.getFullYear();
+      const hh = String(ora.getHours()).padStart(2, '0');
+      const min = String(ora.getMinutes()).padStart(2, '0');
+      return `${gg}/${mm}/${aaaa} - ${hh}:${min}`;
+    }
+
     async function gestisciFileCaricato(e) {
       if (!e.target.files.length || !cantiereAttivoId) return;
       let file = e.target.files[0];
       let cantiere = cantieri.find(c => c.id === cantiereAttivoId);
       if (!cantiere) return;
 
+      let dataInserimento = ottieniDataOraAttuale();
+
       if (file.type.startsWith('image/')) {
-        // Conversione automatica della foto in PDF leggero
         let reader = new FileReader();
         reader.onload = function(event) {
           let imgData = event.target.result;
@@ -124,10 +297,11 @@
               id: Date.now(),
               nome: nomeFile,
               dataUrl: pdfDataUri,
-              tipo: 'PDF (da Foto)'
+              data: dataInserimento,
+              tipo: 'PDF (Foto)'
             });
             salvaDati();
-            alert("✅ Foto convertita in PDF e salvata con successo!");
+            alert("✅ Foto convertita in PDF con data e ora salvata!");
           }
         };
         reader.readAsDataURL(file);
@@ -138,6 +312,7 @@
             id: Date.now(),
             nome: file.name,
             dataUrl: event.target.result,
+            data: dataInserimento,
             tipo: 'PDF'
           });
           salvaDati();
@@ -160,42 +335,47 @@
     }
 
     function apriFile(dataUrl) {
-      let win = window.open();
-      win.document.write(`<iframe src="${dataUrl}" frameborder="0" style="border:0; top:0; left:0; bottom:0; right:0; width:100%; height:100%;" fullscreen></iframe>`);
-    }
-
-    function condividiWhatsApp(nomeFile, dataUrl) {
-      // Nota: WhatsApp mobile permette di condividere link o testo; per i file completi usiamo la condivisione nativa se disponibile, oppure prepariamo il messaggio.
-      if (navigator.share) {
-        fetch(dataUrl)
-          .then(res => res.blob())
-          .then(blob => {
-            let file = new File([blob], nomeFile, { type: "application/pdf" });
-            navigator.share({
-              title: 'DocCantiere',
-              text: `Invio documento cantiere: ${nomeFile}`,
-              files: [file]
-            }).catch(() => {});
-          });
-      } else {
-        alert("La condivisione diretta dei file richiede l'app installata sul telefono.");
+      try {
+        let arr = dataUrl.split(',');
+        let mime = arr[0].match(/:(.*?);/)[1];
+        let bstr = atob(arr[1]);
+        let n = bstr.length;
+        let u8arr = new Uint8Array(n);
+        while(n--){
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        let blob = new Blob([u8arr], {type:mime});
+        let blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+      } catch(e) {
+        alert("Impossibile aprire l'anteprima del file su questo dispositivo.");
       }
     }
 
-    function condividiEmail(nomeFile, dataUrl) {
+    function condividiFile(nomeFile, dataUrl) {
       if (navigator.share) {
-        fetch(dataUrl)
-          .then(res => res.blob())
-          .then(blob => {
-            let file = new File([blob], nomeFile, { type: "application/pdf" });
-            navigator.share({
-              title: nomeFile,
-              text: 'In allegato il documento da DocCantiere.',
-              files: [file]
-            }).catch(() => {});
-          });
+        try {
+          let arr = dataUrl.split(',');
+          let mime = arr[0].match(/:(.*?);/)[1];
+          let bstr = atob(arr[1]);
+          let n = bstr.length;
+          let u8arr = new Uint8Array(n);
+          while(n--){
+              u8arr[n] = bstr.charCodeAt(n);
+          }
+          let blob = new Blob([u8arr], {type:mime});
+          let file = new File([blob], nomeFile, { type: "application/pdf" });
+
+          navigator.share({
+            title: 'DocCantiere',
+            text: `Documento cantiere: ${nomeFile}`,
+            files: [file]
+          }).catch(() => {});
+        } catch(e) {
+          alert("Usa l'app per la condivisione nativa.");
+        }
       } else {
-        window.location.href = `mailto:?subject=Documento Cantiere: ${nomeFile}&body=In allegato il documento. (Salva prima il file sul telefono per allegarlo)`;
+        alert("Condivisione non supportata direttamente su questo browser.");
       }
     }
 
@@ -203,7 +383,7 @@
       let container = document.getElementById('listaCantieri');
       container.innerHTML = '';
       if (cantieri.length === 0) {
-        container.innerHTML = '<div class="empty" style="text-align:center; padding: 20px;">Nessun cantiere. Clicca su "Nuovo Cantiere" per iniziare.</div>';
+        container.innerHTML = '<div class="empty" style="padding: 30px 0;">Nessun cantiere presente.<br>Clicca su "Nuovo Cantiere" per iniziare.</div>';
         return;
       }
 
@@ -218,16 +398,19 @@
             </div>
             
             <div class="folder-content aperta">
-              <button class="btn btn-sub" onclick="cantiereAttivoId = ${c.id}; document.getElementById('fileInput').click();">📄 + Aggiungi Foto o PDF qui</button>
+              <button class="btn-sub" onclick="cantiereAttivoId = ${c.id}; document.getElementById('fileInput').click();">📷 + Inserisci File o Foto Qui</button>
               <div class="file-list">
                 ${c.files.length === 0 ? '<div class="empty">Nessun documento inserito</div>' : ''}
                 ${c.files.map(f => `
                   <div class="file-item">
-                    <span class="file-name" onclick="apriFile('${f.dataUrl}')">📄 ${f.nome}</span>
-                    <div class="file-actions">
-                      <button class="btn-action btn-whatsapp" onclick="condividiWhatsApp('${f.nome}', '${f.dataUrl}')" title="Invia WhatsApp">💬</button>
-                      <button class="btn-action btn-email" onclick="condividiEmail('${f.nome}', '${f.dataUrl}')" title="Invia Email">✉️</button>
+                    <div class="file-main-info">
+                      <span class="file-name" onclick="apriFile('${f.dataUrl}')">📄 ${f.nome}</span>
                       <button class="btn-delete" onclick="eliminaFile(${c.id}, ${f.id})">🗑️</button>
+                    </div>
+                    <div class="file-date">📅 Caricato il: ${f.data || 'Data non disponibile'}</div>
+                    <div class="file-actions">
+                      <button class="btn-action btn-whatsapp" onclick="condividiFile('${f.nome}', '${f.dataUrl}')">💬 WhatsApp</button>
+                      <button class="btn-action btn-email" onclick="condividiFile('${f.nome}', '${f.dataUrl}')">✉️ Email</button>
                     </div>
                   </div>
                 `).join('')}
@@ -239,7 +422,6 @@
       });
     }
 
-    // Avvio iniziale
     mostraCantieri();
   </script>
 </body>
