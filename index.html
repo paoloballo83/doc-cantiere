@@ -297,7 +297,8 @@
   <div id="listaCantieri"></div>
 
   <script>
-    let cantieri = JSON.parse(localStorage.getItem('doc_cantiere_salvati_v22')) || [];
+    const PASSWORD_SICUREZZA = "1234"; // Password di sicurezza per le eliminazioni
+    let cantieri = JSON.parse(localStorage.getItem('doc_cantiere_salvati_v23')) || [];
     let cantiereCorrenteId = null;
 
     function aggiornaOrologio() {
@@ -317,7 +318,7 @@
     aggiornaOrologio();
 
     function salvaDati() {
-      localStorage.setItem('doc_cantiere_salvati_v22', JSON.stringify(cantieri));
+      localStorage.setItem('doc_cantiere_salvati_v23', JSON.stringify(cantieri));
       mostraCantieri();
     }
 
@@ -343,52 +344,24 @@
       }
     }
 
-    // Funzione di autenticazione biometrica (Impronta Digitale) con fallback a PIN (1234)
-    async function verificaAutorizzazione() {
-      try {
-        // Verifica se il browser/dispositivo supporta l'autenticazione biometrica
-        if (window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
-          const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-          if (available) {
-            // Genera una richiesta di autenticazione basata su piattaforma (impronta / volto)
-            const challenge = new Uint8Array(32);
-            window.crypto.getRandomValues(challenge);
-            
-            await navigator.credentials.get({
-              publicKey: {
-                challenge: challenge,
-                timeout: 60000,
-                userVerification: "required"
-              }
-            });
-            return true; // Impronta verificata con successo!
-          }
-        }
-      } catch (err) {
-        // Se l'utente annulla l'impronta o si verifica un blocco, passa al fallback
+    function verificaSicurezza() {
+      let pwd = prompt("🔒 Inserisci la password di sicurezza (1234) per procedere:");
+      if (pwd === null) return false;
+      if (pwd !== PASSWORD_SICUREZZA) {
+        alert("❌ Password errata. Operazione annullata.");
+        return false;
       }
-
-      // Fallback di sicurezza con PIN numerico se l'impronta fallisce o non è configurata
-      let pwd = prompt("🔒 Impronta non rilevata o non disponibile.\nInserisci la password di sicurezza (1234):");
-      return pwd === "1234";
+      return true;
     }
 
-    async function eliminaCantiere(id) {
-      let autorizzato = await verificaAutorizzazione();
-      if (!autorizzato) {
-        alert("❌ Autenticazione fallita. Eliminazione annullata.");
-        return;
-      }
+    function eliminaCantiere(id) {
+      if (!verificaSicurezza()) return;
       cantieri = cantieri.filter(c => c.id !== id);
       salvaDati();
     }
 
-    async function eliminaFile(cantiereId, fileId) {
-      let autorizzato = await verificaAutorizzazione();
-      if (!autorizzato) {
-        alert("❌ Autenticazione fallita. Eliminazione annullata.");
-        return;
-      }
+    function eliminaFile(cantiereId, fileId) {
+      if (!verificaSicurezza()) return;
       let cantiere = cantieri.find(c => c.id === cantiereId);
       if (cantiere) {
         cantiere.files = cantiere.files.filter(f => f.id !== fileId);
