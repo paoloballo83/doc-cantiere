@@ -298,7 +298,7 @@
 
   <script>
     const PASSWORD_SICUREZZA = "1234"; // Password di sicurezza per le eliminazioni
-    let cantieri = JSON.parse(localStorage.getItem('doc_cantiere_salvati_v23')) || [];
+    let cantieri = JSON.parse(localStorage.getItem('doc_cantiere_salvati_v24')) || [];
     let cantiereCorrenteId = null;
 
     function aggiornaOrologio() {
@@ -318,7 +318,7 @@
     aggiornaOrologio();
 
     function salvaDati() {
-      localStorage.setItem('doc_cantiere_salvati_v23', JSON.stringify(cantieri));
+      localStorage.setItem('doc_cantiere_salvati_v24', JSON.stringify(cantieri));
       mostraCantieri();
     }
 
@@ -455,21 +455,49 @@
       }
     }
 
-    function condividiViaWhatsApp(f) {
-      scaricaFileLocale(f);
-      setTimeout(() => {
-        let testo = encodeURIComponent(`Invio documento cantiere: ${f.nome} (Caricato il ${f.data})`);
-        window.open(`https://api.whatsapp.com/send?text=${testo}`, '_blank');
-      }, 500);
-    }
+    // Condivisione nativa reale tramite il selettore del telefono (Funziona perfettamente con WhatsApp e Email)
+    async function condividiFileNativo(f) {
+      try {
+        let blob, nomeFile;
+        if (f.isFoto) {
+          const { jsPDF } = window.jspdf;
+          const pdf = new jsPDF();
+          pdf.setFontSize(12);
+          pdf.text(`DocCantiere - Foto: ${f.nome}`, 10, 10);
+          pdf.text(`Data caricamento: ${f.data}`, 10, 16);
+          pdf.addImage(f.dataUrl, 'JPEG', 10, 22, 190, 0);
+          blob = pdf.output('blob');
+          nomeFile = f.nome.replace(/\.[^/.]+$/, "") + ".pdf";
+        } else {
+          let arr = f.dataUrl.split(',');
+          let mime = arr[0].match(/:(.*?);/)[1];
+          let bstr = atob(arr[1]);
+          let n = bstr.length;
+          let u8arr = new Uint8Array(n);
+          while(n--) { u8arr[n] = bstr.charCodeAt(n); }
+          blob = new Blob([u8arr], {type: mime});
+          nomeFile = f.nome;
+        }
 
-    function condividiViaEmail(f) {
-      scaricaFileLocale(f);
-      setTimeout(() => {
-        let oggetto = encodeURIComponent(`Documento Cantiere: ${f.nome}`);
-        let corpo = encodeURIComponent(`In allegato il documento del cantiere.\n\n(Il file "${f.nome}" è stato scaricato nella cartella Download del telefono, puoi allegarlo subito).`);
-        window.location.href = `mailto:?subject=${oggetto}&body=${corpo}`;
-      }, 500);
+        const fileToShare = new File([blob], nomeFile, { type: blob.type });
+
+        if (navigator.canShare && navigator.canShare({ files: [fileToShare] })) {
+          await navigator.share({
+            title: 'DocCantiere',
+            text: `Documento cantiere: ${f.nome} (Caricato il ${f.data})`,
+            files: [fileToShare]
+          });
+        } else {
+          // Fallback se la condivisione file diretta non è supportata dal browser
+          scaricaFileLocale(f);
+          alert("File scaricato nella cartella Download! Ora puoi allegarlo dove preferisci.");
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          scaricaFileLocale(f);
+          alert("Condivisione non completata. Il file è stato salvato nella cartella Download.");
+        }
+      }
     }
 
     function scaricaFileLocale(f) {
@@ -554,23 +582,24 @@
 
         const blob = pdf.output('blob');
         const nomeReport = `Backup_DocCantiere_${Date.now()}.pdf`;
-        
-        let blobUrl = URL.createObjectURL(blob);
-        let a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = nomeReport;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        const fileBackup = new File([blob], nomeReport, { type: "application/pdf" });
 
-        alert("📦 Backup PDF scaricato nella cartella Download! Ora si apre l'email.");
-        
-        setTimeout(() => {
-          let oggetto = encodeURIComponent("Backup Generale DocCantiere");
-          let corpo = encodeURIComponent("In allegato il report generale dei cantieri (il file PDF è salvato nella cartella Download del telefono).");
-          window.location.href = `mailto:?subject=${oggetto}&body=${corpo}`;
-        }, 1000);
-
+        if (navigator.canShare && navigator.canShare({ files: [fileBackup] })) {
+          navigator.share({
+            title: 'Backup DocCantiere',
+            text: 'In allegato il report generale dei cantieri.',
+            files: [fileBackup]
+          });
+        } else {
+          let blobUrl = URL.createObjectURL(blob);
+          let a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = nomeReport;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          alert("📦 Backup PDF scaricato nella cartella Download!");
+        }
       } catch (err) {
         alert("Errore nella creazione del backup.");
       }
@@ -612,8 +641,8 @@
                     ${f.isFoto ? `<img src="${f.dataUrl}" class="img-preview" onclick='apriFile(${JSON.stringify(f)})'>` : ''}
                     <div class="file-date">📅 Caricato: ${f.data}</div>
                     <div class="file-actions">
-                      <button class="btn-action btn-whatsapp" onclick='condividiViaWhatsApp(${JSON.stringify(f)})'>💬 WhatsApp</button>
-                      <button class="btn-action btn-email" onclick='condividiViaEmail(${JSON.stringify(f)})'>✉️ Email</button>
+                      <button class="btn-action btn-whatsapp" onclick='condividiFileNativo(${JSON.stringify(f)})'>💬 Condividi</button>
+                      <button class="btn-action btn-email" onclick='condividiFileNativo(${JSON.stringify(f)})'>✉️ Invia</button>
                     </div>
                   </div>
                 `).join('')}
