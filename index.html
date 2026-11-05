@@ -19,6 +19,7 @@
       --whatsapp: #22c55e;
       --email: #3b82f6;
       --danger: #ef4444;
+      --backup: #8b5cf6;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -62,9 +63,9 @@
       background: linear-gradient(135deg, var(--primary), var(--primary-hover)); 
       color: white; 
       border: none; 
-      padding: 16px; 
+      padding: 15px; 
       border-radius: 14px; 
-      font-size: 1.05rem; 
+      font-size: 1rem; 
       font-weight: 800; 
       width: 100%; 
       cursor: pointer; 
@@ -73,10 +74,16 @@
       justify-content: center; 
       gap: 10px; 
       box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3); 
+      margin-bottom: 10px;
     }
+
+    .btn-backup {
+      background: linear-gradient(135deg, var(--backup), #6d28d9);
+      box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+    }
+
     .btn-main:active { transform: scale(0.98); }
 
-    /* DASHBOARD STATISTICHE E DATA */
     .dashboard {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -105,9 +112,8 @@
 
     .dash-title { font-size: 0.75rem; color: var(--text-sub); font-weight: 600; text-transform: uppercase; }
     .dash-value { font-size: 1.3rem; color: var(--accent); font-weight: 800; margin-top: 2px; }
-    .dash-clock { font-size: 0.9rem; color: var(--text-main); font-weight: 700; }
+    .dash-clock { font-size: 0.85rem; color: var(--text-main); font-weight: 700; }
 
-    /* FORM CREAZIONE CANTIERE MODALE */
     .modal-add {
       display: none;
       background: var(--card-bg);
@@ -131,13 +137,10 @@
       width: 100%;
     }
 
-    .input-text:focus { outline: none; border-color: var(--primary); }
-
     .modal-actions { display: flex; gap: 8px; }
     .btn-confirm { background: var(--whatsapp); color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; flex: 1; cursor: pointer; }
     .btn-cancel { background: var(--danger); color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; flex: 1; cursor: pointer; }
 
-    /* SCHEDE CANTIERI */
     .folder-card { 
       background: var(--card-bg); 
       border: 1px solid var(--card-border); 
@@ -161,7 +164,6 @@
       align-items: center; 
       gap: 10px; 
       flex-grow: 1; 
-      cursor: pointer;
     }
 
     .folder-content { 
@@ -198,6 +200,16 @@
       word-break: break-all;
     }
 
+    .img-preview {
+      width: 100%;
+      max-height: 180px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-top: 4px;
+      border: 1px solid var(--card-border);
+      cursor: pointer;
+    }
+
     .file-date {
       font-size: 0.75rem;
       color: var(--text-sub);
@@ -226,7 +238,7 @@
 
     .btn-whatsapp { background: var(--whatsapp); }
     .btn-email { background: var(--email); }
-    .btn-delete { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.4); padding: 6px 10px; border-radius: 8px; font-size: 0.8rem; }
+    .btn-delete { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.4); padding: 6px 10px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; }
     
     .btn-sub { 
       background: #0f172a; 
@@ -251,26 +263,24 @@
     <span class="badge">PRO</span>
   </header>
 
-  <!-- Pulsante Principale -->
   <button class="btn-main" onclick="mostraFormCantiere()">➕ Nuovo Cantiere</button>
+  <button class="btn-main btn-backup" onclick="eseguiBackupPDF()">📦 Backup PDF e Invia Email</button>
 
-  <!-- Form Inserimento Nuovo Cantiere -->
   <div id="formCantiere" class="modal-add">
-    <input type="text" id="nomeCantiereInput" class="input-text" placeholder="Inserisci nome cantiere (es. Via Roma 12)...">
+    <input type="text" id="nomeCantiereInput" class="input-text" placeholder="Nome cantiere (es. Via Roma 12)...">
     <div class="modal-actions">
-      <button class="btn-confirm" onclick="confermaNuovoCantiere()">Salva Cantiere</button>
+      <button class="btn-confirm" onclick="confermaNuovoCantiere()">Salva</button>
       <button class="btn-cancel" onclick="nascondiFormCantiere()">Annulla</button>
     </div>
   </div>
 
-  <!-- Dashboard Statistche & Data -->
   <div class="dashboard">
     <div class="dash-card dash-full">
       <div>
         <div class="dash-title">📅 Data & Ora</div>
         <div class="dash-clock" id="clockBox">--/--/---- --:--</div>
       </div>
-      <span style="font-size: 1.5rem;">⏱️</span>
+      <span style="font-size: 1.4rem;">⏱️</span>
     </div>
     <div class="dash-card">
       <div class="dash-title">📂 Cantieri</div>
@@ -284,14 +294,12 @@
 
   <input type="file" id="fileInputGlobale" style="display:none;" accept="image/*,.pdf" onchange="gestisciFileSelezionato(event)">
 
-  <!-- Lista Cantieri Aperti -->
   <div id="listaCantieri"></div>
 
   <script>
-    let cantieri = JSON.parse(localStorage.getItem('doc_cantiere_salvati_v16')) || [];
+    let cantieri = JSON.parse(localStorage.getItem('doc_cantiere_salvati_v19')) || [];
     let cantiereCorrenteId = null;
 
-    // Gestione Orologio in Tempo Reale
     function aggiornaOrologio() {
       const ora = new Date();
       const giorni = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
@@ -309,7 +317,7 @@
     aggiornaOrologio();
 
     function salvaDati() {
-      localStorage.setItem('doc_cantiere_salvati_v16', JSON.stringify(cantieri));
+      localStorage.setItem('doc_cantiere_salvati_v19', JSON.stringify(cantieri));
       mostraCantieri();
     }
 
@@ -331,12 +339,12 @@
         salvaDati();
         nascondiFormCantiere();
       } else {
-        alert("Inserisci un nome valido per il cantiere.");
+        alert("Inserisci un nome valido.");
       }
     }
 
     function eliminaCantiere(id) {
-      if (!confirm("Vuoi eliminare questo cantiere e tutti i suoi file?")) return;
+      if (!confirm("Vuoi eliminare questo cantiere e i suoi file?")) return;
       cantieri = cantieri.filter(c => c.id !== id);
       salvaDati();
     }
@@ -362,41 +370,32 @@
 
       if (file.type.startsWith('image/')) {
         reader.onload = function(event) {
-          const imgData = event.target.result;
           const img = new Image();
-          img.src = imgData;
+          img.src = event.target.result;
           img.onload = function() {
-            try {
-              const { jsPDF } = window.jspdf;
-              const pdf = new jsPDF();
-              const pageWidth = pdf.internal.pageSize.getWidth();
-              const pageHeight = pdf.internal.pageSize.getHeight();
-              
-              let width = pageWidth - 20;
-              let height = (img.height * width) / img.width;
-              if (height > pageHeight - 30) {
-                height = pageHeight - 30;
-                width = (img.width * height) / img.height;
-              }
-              
-              pdf.setFontSize(12);
-              pdf.text("DocCantiere - Foto Documento", 10, 10);
-              pdf.addImage(imgData, 'JPEG', 10, 15, width, height);
-              
-              const pdfBase64 = pdf.output('datauristring');
-              const nomeFile = file.name.replace(/\.[^/.]+$/, "") + ".pdf";
-
-              cantiere.files.push({
-                id: Date.now(),
-                nome: nomeFile,
-                dataUrl: pdfBase64,
-                data: dataStr
-              });
-              salvaDati();
-              alert("✅ Foto convertita in PDF e salvata!");
-            } catch (err) {
-              alert("Errore durante la conversione della foto.");
+            const canvas = document.createElement('canvas');
+            const maxW = 1000;
+            let w = img.width;
+            let h = img.height;
+            if (w > maxW) {
+              h = Math.round((h * maxW) / w);
+              w = maxW;
             }
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.75);
+
+            cantiere.files.push({
+              id: Date.now(),
+              nome: file.name,
+              dataUrl: compressedBase64,
+              data: dataStr,
+              isFoto: true
+            });
+            salvaDati();
           };
         };
         reader.readAsDataURL(file);
@@ -406,10 +405,10 @@
             id: Date.now(),
             nome: file.name,
             dataUrl: event.target.result,
-            data: dataStr
+            data: dataStr,
+            isFoto: false
           });
           salvaDati();
-          alert("✅ Documento PDF salvato con successo!");
         };
         reader.readAsDataURL(file);
       }
@@ -424,52 +423,127 @@
       }
     }
 
-    function apriFile(dataUrl, nomeFile) {
-      try {
-        let arr = dataUrl.split(',');
-        let mime = arr[0].match(/:(.*?);/)[1];
-        let bstr = atob(arr[1]);
-        let n = bstr.length;
-        let u8arr = new Uint8Array(n);
-        while(n--) { u8arr[n] = bstr.charCodeAt(n); }
-        let blob = new Blob([u8arr], {type: mime});
-        
-        let blobUrl = URL.createObjectURL(blob);
-        let a = document.createElement('a');
-        a.href = blobUrl;
-        a.target = '_blank';
-        a.download = nomeFile;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      } catch(e) {
-        alert("Impossibile aprire il file.");
+    function apriFile(f) {
+      if (f.isFoto) {
+        let win = window.open();
+        win.document.write(`<body style="background:#000; margin:0; display:flex; justify-content:center; align-items:center; height:100vh;"><img src="${f.dataUrl}" style="max-width:100%; max-height:100%; object-fit:contain;"></body>`);
+      } else {
+        try {
+          let arr = f.dataUrl.split(',');
+          let mime = arr[0].match(/:(.*?);/)[1];
+          let bstr = atob(arr[1]);
+          let n = bstr.length;
+          let u8arr = new Uint8Array(n);
+          while(n--) { u8arr[n] = bstr.charCodeAt(n); }
+          let blob = new Blob([u8arr], {type: mime});
+          let blobUrl = URL.createObjectURL(blob);
+          window.open(blobUrl, '_blank');
+        } catch(e) {
+          alert("Impossibile aprire il file.");
+        }
       }
     }
 
-    function condividiFile(nomeFile, dataUrl) {
+    function condividiFile(f) {
       try {
-        let arr = dataUrl.split(',');
-        let mime = arr[0].match(/:(.*?);/)[1];
-        let bstr = atob(arr[1]);
-        let n = bstr.length;
-        let u8arr = new Uint8Array(n);
-        while(n--) { u8arr[n] = bstr.charCodeAt(n); }
-        let blob = new Blob([u8arr], {type: mime});
-        let file = new File([blob], nomeFile, { type: "application/pdf" });
+        const { jsPDF } = window.jspdf;
+        let fileCondivisione;
 
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        if (f.isFoto) {
+          const pdf = new jsPDF();
+          pdf.setFontSize(12);
+          pdf.text(`DocCantiere - Foto: ${f.nome}`, 10, 10);
+          pdf.text(`Data caricamento: ${f.data}`, 10, 16);
+          pdf.addImage(f.dataUrl, 'JPEG', 10, 22, 190, 0);
+          
+          const blob = pdf.output('blob');
+          const nomePdf = f.nome.replace(/\.[^/.]+$/, "") + ".pdf";
+          fileCondivisione = new File([blob], nomePdf, { type: "application/pdf" });
+        } else {
+          let arr = f.dataUrl.split(',');
+          let mime = arr[0].match(/:(.*?);/)[1];
+          let bstr = atob(arr[1]);
+          let n = bstr.length;
+          let u8arr = new Uint8Array(n);
+          while(n--) { u8arr[n] = bstr.charCodeAt(n); }
+          let blob = new Blob([u8arr], {type: mime});
+          fileCondivisione = new File([blob], f.nome, { type: mime });
+        }
+
+        if (navigator.canShare && navigator.canShare({ files: [fileCondivisione] })) {
           navigator.share({
             title: 'DocCantiere',
-            text: `Documento cantiere: ${nomeFile}`,
-            files: [file]
+            text: `Documento cantiere: ${f.nome}`,
+            files: [fileCondivisione]
           }).catch(() => {});
         } else {
-          apriFile(dataUrl, nomeFile);
-          alert("File scaricato! Puoi allegarlo direttamente via WhatsApp o Email.");
+          alert("Condivisione diretta non supportata dal browser corrente.");
         }
       } catch(e) {
-        alert("Errore di condivisione.");
+        alert("Errore durante la preparazione del file.");
+      }
+    }
+
+    function eseguiBackupPDF() {
+      if (cantieri.length === 0) {
+        alert("Nessun cantiere presente per il backup.");
+        return;
+      }
+
+      try {
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF();
+        
+        pdf.setFontSize(18);
+        pdf.setTextColor(249, 115, 22);
+        pdf.text("DocCantiere - Report Backup Generale", 14, 20);
+
+        pdf.setFontSize(10);
+        pdf.setTextColor(100, 100, 100);
+        pdf.text(`Generato il: ${new Date().toLocaleString()}`, 14, 28);
+        pdf.line(14, 32, 196, 32);
+
+        let y = 40;
+        cantieri.forEach((c, index) => {
+          if (y > 270) { pdf.addPage(); y = 20; }
+          pdf.setFontSize(14);
+          pdf.setTextColor(30, 41, 59);
+          pdf.text(`Cantiere [${index + 1}]: ${c.nome}`, 14, y);
+          y += 8;
+
+          if (c.files.length === 0) {
+            pdf.setFontSize(10);
+            pdf.setTextColor(150, 150, 150);
+            pdf.text("  - Nessun documento o foto presente", 18, y);
+            y += 8;
+          } else {
+            c.files.forEach(f => {
+              if (y > 275) { pdf.addPage(); y = 20; }
+              pdf.setFontSize(10);
+              pdf.setTextColor(50, 50, 50);
+              let tipoText = f.isFoto ? "[FOTO]" : "[PDF]";
+              pdf.text(`  • ${tipoText} ${f.nome} (Caricato: ${f.data})`, 18, y);
+              y += 6;
+            });
+          }
+          y += 6;
+        });
+
+        const blob = pdf.output('blob');
+        const nomeReport = `Backup_DocCantiere_${Date.now()}.pdf`;
+        const fileBackup = new File([blob], nomeReport, { type: "application/pdf" });
+
+        if (navigator.canShare && navigator.canShare({ files: [fileBackup] })) {
+          navigator.share({
+            title: 'Backup DocCantiere',
+            text: 'In allegato il report completo dei cantieri.',
+            files: [fileBackup]
+          }).catch(() => {});
+        } else {
+          alert("Backup generato. Utilizza un dispositivo mobile per inviarlo via email.");
+        }
+      } catch (err) {
+        alert("Errore nella creazione del backup.");
       }
     }
 
@@ -477,7 +551,6 @@
       let container = document.getElementById('listaCantieri');
       container.innerHTML = '';
 
-      // Aggiorna Contatori Dashboard
       document.getElementById('cntCantieri').innerText = cantieri.length;
       let totaleFile = cantieri.reduce((acc, c) => acc + c.files.length, 0);
       document.getElementById('cntFile').innerText = totaleFile;
@@ -500,17 +573,18 @@
             <div class="folder-content">
               <button class="btn-sub" onclick="avviaCaricamento(${c.id})">📸📄 Aggiungi Foto o PDF</button>
               <div class="file-list">
-                ${c.files.length === 0 ? '<div class="empty">Nessun documento presente</div>' : ''}
+                ${c.files.length === 0 ? '<div class="empty">Nessun documento inserito</div>' : ''}
                 ${c.files.map(f => `
                   <div class="file-item">
                     <div class="file-main-info">
-                      <span class="file-name" onclick="apriFile('${f.dataUrl}', '${f.nome}')">📄 ${f.nome}</span>
+                      <span class="file-name" onclick='apriFile(${JSON.stringify(f)})'>${f.isFoto ? '📷' : '📄'} ${f.nome}</span>
                       <button class="btn-delete" onclick="eliminaFile(${c.id}, ${f.id})">🗑️</button>
                     </div>
-                    <div class="file-date">📅 Caricato il: ${f.data}</div>
+                    ${f.isFoto ? `<img src="${f.dataUrl}" class="img-preview" onclick='apriFile(${JSON.stringify(f)})'>` : ''}
+                    <div class="file-date">📅 Caricato: ${f.data}</div>
                     <div class="file-actions">
-                      <button class="btn-action btn-whatsapp" onclick="condividiFile('${f.nome}', '${f.dataUrl}')">💬 WhatsApp</button>
-                      <button class="btn-action btn-email" onclick="condividiFile('${f.nome}', '${f.dataUrl}')">✉️ Email</button>
+                      <button class="btn-action btn-whatsapp" onclick='condividiFile(${JSON.stringify(f)})'>💬 WhatsApp</button>
+                      <button class="btn-action btn-email" onclick='condividiFile(${JSON.stringify(f)})'>✉️ Email</button>
                     </div>
                   </div>
                 `).join('')}
