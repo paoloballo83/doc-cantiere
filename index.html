@@ -301,7 +301,7 @@
 
   <script>
     const PASSWORD_SICUREZZA = "1234";
-    let cantieri = JSON.parse(localStorage.getItem('doc_cantiere_salvati_v28')) || [];
+    let cantieri = JSON.parse(localStorage.getItem('doc_cantiere_salvati_v29')) || [];
     let cantiereCorrenteId = null;
 
     function aggiornaOrologio() {
@@ -315,4 +315,278 @@
       const min = String(ora.getMinutes()).padStart(2, '0');
       const sec = String(ora.getSeconds()).padStart(2, '0');
 
-      document.getElementById('clockBox').innerText =
+      document.getElementById('clockBox').innerText = `${nomeGiorno} ${gg}/${mm}/${aaaa} - ${hh}:${min}:${sec}`;
+    }
+    setInterval(aggiornaOrologio, 1000);
+    aggiornaOrologio();
+
+    function salvaDati() {
+      localStorage.setItem('doc_cantiere_salvati_v29', JSON.stringify(cantieri));
+      mostraCantieri();
+    }
+
+    function mostraFormCantiere() {
+      document.getElementById('formCantiere').classList.add('attiva');
+      document.getElementById('nomeCantiereInput').focus();
+    }
+
+    function nascondiFormCantiere() {
+      document.getElementById('formCantiere').classList.remove('attiva');
+      document.getElementById('nomeCantiereInput').value = '';
+    }
+
+    function confermaNuovoCantiere() {
+      let input = document.getElementById('nomeCantiereInput');
+      let nome = input.value.trim();
+      if (nome !== "") {
+        cantieri.push({ id: Date.now(), nome: nome, files: [] });
+        salvaDati();
+        nascondiFormCantiere();
+      } else {
+        alert("Inserisci un nome valido.");
+      }
+    }
+
+    function verificaSicurezza() {
+      let pwd = prompt("🔒 Inserisci la password di sicurezza (1234) per procedere:");
+      if (pwd === null) return false;
+      if (pwd !== PASSWORD_SICUREZZA) {
+        alert("❌ Password errata. Operazione annullata.");
+        return false;
+      }
+      return true;
+    }
+
+    function eliminaCantiere(id) {
+      if (!verificaSicurezza()) return;
+      cantieri = cantieri.filter(c => c.id !== id);
+      salvaDati();
+    }
+
+    function eliminaFile(cantiereId, fileId) {
+      if (!verificaSicurezza()) return;
+      let cantiere = cantieri.find(c => c.id === cantiereId);
+      if (cantiere) {
+        cantiere.files = cantiere.files.filter(f => f.id !== fileId);
+        salvaDati();
+      }
+    }
+
+    function avviaCaricamento(idCantiere) {
+      cantiereCorrenteId = idCantiere;
+      let input = document.getElementById('fileInputGlobale');
+      input.value = '';
+      input.click();
+    }
+
+    function gestisciFileSelezionato(e) {
+      const file = e.target.files[0];
+      if (!file || !cantiereCorrenteId) return;
+
+      const cantiere = cantieri.find(c => c.id === cantiereCorrenteId);
+      if (!cantiere) return;
+
+      const ora = new Date();
+      const dataStr = `${String(ora.getDate()).padStart(2, '0')}/${String(ora.getMonth() + 1).padStart(2, '0')}/${ora.getFullYear()} - ${String(ora.getHours()).padStart(2, '0')}:${String(ora.getMinutes()).padStart(2, '0')}`;
+
+      const reader = new FileReader();
+
+      if (file.type.startsWith('image/')) {
+        reader.onload = function(event) {
+          const img = new Image();
+          img.src = event.target.result;
+          img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const maxW = 1000;
+            let w = img.width;
+            let h = img.height;
+            if (w > maxW) {
+              h = Math.round((h * maxW) / w);
+              w = maxW;
+            }
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+            
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+
+            cantiere.files.push({
+              id: Date.now(),
+              nome: file.name,
+              dataUrl: compressedBase64,
+              data: dataStr,
+              isFoto: true
+            });
+            salvaDati();
+          };
+        };
+        reader.readAsDataURL(file);
+      } else {
+        reader.onload = function(event) {
+          cantiere.files.push({
+            id: Date.now(),
+            nome: file.name,
+            dataUrl: event.target.result,
+            data: dataStr,
+            isFoto: false
+          });
+          salvaDati();
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    // Metodo alternativo sicuro: forza il download pulito del file così Android lo apre con il lettore esterno predefinito
+    function apriFile(f) {
+      try {
+        let a = document.createElement('a');
+        a.href = f.dataUrl;
+        a.download = f.nome;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } catch(e) {
+        alert("Impossibile aprire il file.");
+      }
+    }
+
+    function inviaWhatsApp(f) {
+      apriFile(f);
+      alert(`📥 File "${f.nome}" scaricato sul telefono!\nOra si apre WhatsApp: tocca la graffetta 📎 e allega il file.`);
+      setTimeout(() => {
+        let testo = encodeURIComponent(`Documento Cantiere: ${f.nome} (Caricato: ${f.data})`);
+        window.location.href = `whatsapp://send?text=${testo}`;
+      }, 800);
+    }
+
+    function inviaEmail(f) {
+      apriFile(f);
+      alert(`📥 File "${f.nome}" scaricato sul telefono!\nOra si apre l'Email: inserisci il destinatario e allega il file.`);
+      setTimeout(() => {
+        let oggetto = encodeURIComponent(`Documento Cantiere: ${f.nome}`);
+        let corpo = encodeURIComponent(`In allegato trovi il documento: ${f.nome}\nCaricato il: ${f.data}`);
+        window.location.href = `mailto:?subject=${oggetto}&body=${corpo}`;
+      }, 800);
+    }
+
+    function eseguiBackupPDF() {
+      if (cantieri.length === 0) {
+        alert("Nessun cantiere presente per il backup.");
+        return;
+      }
+
+      try {
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF();
+        
+        pdf.setFontSize(18);
+        pdf.setTextColor(249, 115, 22);
+        pdf.text("DocCantiere - Report Backup Generale", 14, 20);
+
+        pdf.setFontSize(10);
+        pdf.setTextColor(100, 100, 100);
+        pdf.text(`Generato il: ${new Date().toLocaleString()}`, 14, 28);
+        pdf.line(14, 32, 196, 32);
+
+        let y = 40;
+        cantieri.forEach((c, index) => {
+          if (y > 270) { pdf.addPage(); y = 20; }
+          pdf.setFontSize(14);
+          pdf.setTextColor(30, 41, 59);
+          pdf.text(`Cantiere [${index + 1}]: ${c.nome}`, 14, y);
+          y += 8;
+
+          if (c.files.length === 0) {
+            pdf.setFontSize(10);
+            pdf.setTextColor(150, 150, 150);
+            pdf.text("  - Nessun documento o foto presente", 18, y);
+            y += 8;
+          } else {
+            c.files.forEach(f => {
+              if (y > 275) { pdf.addPage(); y = 20; }
+              pdf.setFontSize(10);
+              pdf.setTextColor(50, 50, 50);
+              let tipoText = f.isFoto ? "[FOTO]" : "[PDF]";
+              pdf.text(`  • ${tipoText} ${f.nome} (Caricato: ${f.data})`, 18, y);
+              y += 6;
+            });
+          }
+          y += 6;
+        });
+
+        const pdfDataUri = pdf.output('datauristring');
+        let a = document.createElement('a');
+        a.href = pdfDataUri;
+        a.download = `Backup_DocCantiere_${Date.now()}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        alert("📦 Backup PDF scaricato sul telefono!\nOra si apre l'email: allega il report appena scaricato.");
+        setTimeout(() => {
+          let oggetto = encodeURIComponent("Backup Generale DocCantiere");
+          let corpo = encodeURIComponent("In allegato il report generale dei cantieri (il file PDF è salvato nella cartella Download del telefono).");
+          window.location.href = `mailto:?subject=${oggetto}&body=${corpo}`;
+        }, 800);
+
+      } catch (err) {
+        alert("Errore nella creazione del backup.");
+      }
+    }
+
+    function mostraCantieri() {
+      let container = document.getElementById('listaCantieri');
+      container.innerHTML = '';
+
+      document.getElementById('cntCantieri').innerText = cantieri.length;
+      let totaleFile = cantieri.reduce((acc, c) => acc + c.files.length, 0);
+      document.getElementById('cntFile').innerText = totaleFile;
+
+      if (cantieri.length === 0) {
+        container.innerHTML = '<div class="empty" style="padding: 30px 0;">Nessun cantiere aperto.<br>Clicca su "Nuovo Cantiere" per iniziare.</div>';
+        return;
+      }
+
+      cantieri.forEach(c => {
+        let html = `
+          <div class="folder-card">
+            <div class="folder-header">
+              <div class="folder-title">
+                <span>📁</span> <span>${c.nome}</span>
+              </div>
+              <button class="btn-delete" onclick="eliminaCantiere(${c.id})">🗑️</button>
+            </div>
+            
+            <div class="folder-content">
+              <button class="btn-sub" onclick="avviaCaricamento(${c.id})">📸📄 Aggiungi Foto o PDF</button>
+              <div class="file-list">
+                ${c.files.length === 0 ? '<div class="empty">Nessun documento inserito</div>' : ''}
+                ${c.files.map(f => `
+                  <div class="file-item">
+                    <div class="file-main-info">
+                      <span class="file-name" onclick='apriFile(${JSON.stringify(f)})'>${f.isFoto ? '📷' : '📄'} ${f.nome}</span>
+                      <button class="btn-delete" onclick="eliminaFile(${c.id}, ${f.id})">🗑️</button>
+                    </div>
+                    ${f.isFoto ? `<img src="${f.dataUrl}" class="img-preview" onclick='apriFile(${JSON.stringify(f)})'>` : ''}
+                    <div class="file-date">📅 Caricato: ${f.data}</div>
+                    <div class="file-actions">
+                      <button class="btn-action btn-whatsapp" onclick='inviaWhatsApp(${JSON.stringify(f)})'>💬 WhatsApp</button>
+                      <button class="btn-action btn-email" onclick='inviaEmail(${JSON.stringify(f)})'>✉️ Email</button>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+        container.innerHTML += html;
+      });
+    }
+
+    mostraCantieri();
+  </script>
+</body>
+</html>
