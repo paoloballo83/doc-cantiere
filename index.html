@@ -75,7 +75,6 @@
       gap: 10px; 
       margin-bottom: 14px; 
       box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25); 
-      transition: all 0.2s ease;
     }
     
     .btn:active { transform: scale(0.98); }
@@ -208,18 +207,17 @@
 
   <button class="btn" onclick="nuovoCantiere()">➕ Nuovo Cantiere</button>
   
-  <!-- Input file generico posizionato nel DOM in modo stabile -->
   <input type="file" id="fileInputGlobale" style="display:none;" accept="image/*,.pdf" onchange="gestisciFileSelezionato(event)">
 
   <div id="listaCantieri"></div>
 
   <script>
     const PASSWORD_ELIMINAZIONE = "1234";
-    let cantieri = JSON.parse(localStorage.getItem('doc_cantiere_salvati_v14')) || [];
+    let cantieri = JSON.parse(localStorage.getItem('doc_cantiere_salvati_v15')) || [];
     let cantiereCorrenteId = null;
 
     function salvaDati() {
-      localStorage.setItem('doc_cantiere_salvati_v14', JSON.stringify(cantieri));
+      localStorage.setItem('doc_cantiere_salvati_v15', JSON.stringify(cantieri));
       mostraCantieri();
     }
 
@@ -245,177 +243,4 @@
     function avviaCaricamento(idCantiere) {
       cantiereCorrenteId = idCantiere;
       let input = document.getElementById('fileInputGlobale');
-      input.value = ''; // Reset per consentire la ri-selezione dello stesso file se necessario
-      input.click();
-    }
-
-    function ottieniDataOraAttuale() {
-      const ora = new Date();
-      const gg = String(ora.getDate()).padStart(2, '0');
-      const mm = String(ora.getMonth() + 1).padStart(2, '0');
-      const aaaa = ora.getFullYear();
-      const hh = String(ora.getHours()).padStart(2, '0');
-      const min = String(ora.getMinutes()).padStart(2, '0');
-      return `${gg}/${mm}/${aaaa} - ${hh}:${min}`;
-    }
-
-    function gestisciFileSelezionato(e) {
-      const file = e.target.files[0];
-      if (!file || !cantiereCorrenteId) return;
-
-      const cantiere = cantieri.find(c => c.id === cantiereCorrenteId);
-      if (!cantiere) return;
-
-      const dataInserimento = ottieniDataOraAttuale();
-      const reader = new FileReader();
-
-      if (file.type.startsWith('image/')) {
-        reader.onload = function(event) {
-          const imgData = event.target.result;
-          const img = new Image();
-          img.src = imgData;
-          img.onload = function() {
-            try {
-              const { jsPDF } = window.jspdf;
-              const pdf = new jsPDF();
-              const width = pdf.internal.pageSize.getWidth();
-              const height = (img.height * width) / img.width;
-              pdf.addImage(imgData, 'JPEG', 0, 10, width, height);
-              
-              const pdfDataUri = pdf.output('datauristring');
-              const nomeFile = file.name.replace(/\.[^/.]+$/, "") + ".pdf";
-
-              cantiere.files.push({
-                id: Date.now(),
-                nome: nomeFile,
-                dataUrl: pdfDataUri,
-                data: dataInserimento,
-                tipo: 'PDF (Foto)'
-              });
-              salvaDati();
-              alert("✅ Foto convertita in PDF e salvata con successo!");
-            } catch (err) {
-              alert("Errore durante la conversione della foto.");
-            }
-          };
-        };
-        reader.readAsDataURL(file);
-      } else if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-        reader.onload = function(event) {
-          cantiere.files.push({
-            id: Date.now(),
-            nome: file.name,
-            dataUrl: event.target.result,
-            data: dataInserimento,
-            tipo: 'PDF'
-          });
-          salvaDati();
-          alert("✅ Documento PDF salvato con successo!");
-        };
-        reader.readAsDataURL(file);
-      } else {
-        alert("Formato non supportato. Seleziona un'immagine o un file PDF.");
-      }
-    }
-
-    function eliminaFile(cantiereId, fileId) {
-      if (!confirm("Eliminare questo file?")) return;
-      let cantiere = cantieri.find(c => c.id === cantiereId);
-      if (cantiere) {
-        cantiere.files = cantiere.files.filter(f => f.id !== fileId);
-        salvaDati();
-      }
-    }
-
-    function apriFile(dataUrl) {
-      try {
-        let arr = dataUrl.split(',');
-        let mime = arr[0].match(/:(.*?);/)[1];
-        let bstr = atob(arr[1]);
-        let n = bstr.length;
-        let u8arr = new Uint8Array(n);
-        while(n--){
-            u8arr[n] = bstr.charCodeAt(n);
-        }
-        let blob = new Blob([u8arr], {type:mime});
-        let blobUrl = URL.createObjectURL(blob);
-        window.open(blobUrl, '_blank');
-      } catch(e) {
-        alert("Impossibile aprire l'anteprima del file su questo dispositivo.");
-      }
-    }
-
-    function condividiFile(nomeFile, dataUrl) {
-      if (navigator.share) {
-        try {
-          let arr = dataUrl.split(',');
-          let mime = arr[0].match(/:(.*?);/)[1];
-          let bstr = atob(arr[1]);
-          let n = bstr.length;
-          let u8arr = new Uint8Array(n);
-          while(n--){
-              u8arr[n] = bstr.charCodeAt(n);
-          }
-          let blob = new Blob([u8arr], {type:mime});
-          let file = new File([blob], nomeFile, { type: "application/pdf" });
-
-          navigator.share({
-            title: 'DocCantiere',
-            text: `Documento cantiere: ${nomeFile}`,
-            files: [file]
-          }).catch(() => {});
-        } catch(e) {
-          alert("Errore durante la condivisione.");
-        }
-      } else {
-        alert("La condivisione diretta non è supportata su questo browser.");
-      }
-    }
-
-    function mostraCantieri() {
-      let container = document.getElementById('listaCantieri');
-      container.innerHTML = '';
-      if (cantieri.length === 0) {
-        container.innerHTML = '<div class="empty" style="padding: 30px 0;">Nessun cantiere presente.<br>Clicca su "Nuovo Cantiere" per iniziare.</div>';
-        return;
-      }
-
-      cantieri.forEach(c => {
-        let html = `
-          <div class="folder-card">
-            <div class="folder-header">
-              <div class="folder-title" onclick="this.parentElement.nextElementSibling.classList.toggle('aperta')">
-                <span>📁</span> <span>${c.nome}</span>
-              </div>
-              <button class="btn-delete" onclick="eliminaCantiere(${c.id})">🗑️</button>
-            </div>
-            
-            <div class="folder-content aperta">
-              <button class="btn-sub" onclick="avviaCaricamento(${c.id})">🖼️📁 Aggiungi Foto o PDF qui</button>
-              <div class="file-list">
-                ${c.files.length === 0 ? '<div class="empty">Nessun documento inserito</div>' : ''}
-                ${c.files.map(f => `
-                  <div class="file-item">
-                    <div class="file-main-info">
-                      <span class="file-name" onclick="apriFile('${f.dataUrl}')">📄 ${f.nome}</span>
-                      <button class="btn-delete" onclick="eliminaFile(${c.id}, ${f.id})">🗑️</button>
-                    </div>
-                    <div class="file-date">📅 Caricato il: ${f.data || 'Data non disponibile'}</div>
-                    <div class="file-actions">
-                      <button class="btn-action btn-whatsapp" onclick="condividiFile('${f.nome}', '${f.dataUrl}')">💬 WhatsApp</button>
-                      <button class="btn-action btn-email" onclick="condividiFile('${f.nome}', '${f.dataUrl}')">✉️ Email</button>
-                    </div>
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-          </div>
-        `;
-        container.innerHTML += html;
-      });
-    }
-
-    mostraCantieri();
-  </script>
-</body>
-</html>
+      input.value = '';
