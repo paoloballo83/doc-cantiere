@@ -226,18 +226,17 @@
     .btn-action { 
       border: none; 
       color: #fff; 
-      padding: 8px 12px; 
+      padding: 8px 14px; 
       border-radius: 8px; 
-      font-size: 0.8rem; 
+      font-size: 0.85rem; 
       font-weight: 700;
       cursor: pointer; 
       display: inline-flex; 
       align-items: center; 
-      gap: 4px; 
+      gap: 6px; 
     }
 
-    .btn-whatsapp { background: var(--whatsapp); }
-    .btn-email { background: var(--email); }
+    .btn-share { background: var(--whatsapp); width: 100%; justify-content: center; }
     .btn-delete { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.4); padding: 6px 10px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; }
     
     .btn-sub { 
@@ -297,8 +296,8 @@
   <div id="listaCantieri"></div>
 
   <script>
-    const PASSWORD_SICUREZZA = "1234"; // Password di sicurezza per le eliminazioni
-    let cantieri = JSON.parse(localStorage.getItem('doc_cantiere_salvati_v24')) || [];
+    const PASSWORD_SICUREZZA = "1234";
+    let cantieri = JSON.parse(localStorage.getItem('doc_cantiere_salvati_v25')) || [];
     let cantiereCorrenteId = null;
 
     function aggiornaOrologio() {
@@ -318,7 +317,7 @@
     aggiornaOrologio();
 
     function salvaDati() {
-      localStorage.setItem('doc_cantiere_salvati_v24', JSON.stringify(cantieri));
+      localStorage.setItem('doc_cantiere_salvati_v25', JSON.stringify(cantieri));
       mostraCantieri();
     }
 
@@ -434,29 +433,25 @@
       }
     }
 
+    // Apertura sicura e immediata di qualsiasi file (foto o PDF)
     function apriFile(f) {
-      if (f.isFoto) {
-        let win = window.open();
-        win.document.write(`<body style="background:#000; margin:0; display:flex; justify-content:center; align-items:center; height:100vh;"><img src="${f.dataUrl}" style="max-width:100%; max-height:100%; object-fit:contain;"></body>`);
-      } else {
-        try {
-          let arr = f.dataUrl.split(',');
-          let mime = arr[0].match(/:(.*?);/)[1];
-          let bstr = atob(arr[1]);
-          let n = bstr.length;
-          let u8arr = new Uint8Array(n);
-          while(n--) { u8arr[n] = bstr.charCodeAt(n); }
-          let blob = new Blob([u8arr], {type: mime});
-          let blobUrl = URL.createObjectURL(blob);
-          window.open(blobUrl, '_blank');
-        } catch(e) {
-          alert("Impossibile aprire il file.");
-        }
+      try {
+        let arr = f.dataUrl.split(',');
+        let mime = arr[0].match(/:(.*?);/)[1];
+        let bstr = atob(arr[1]);
+        let n = bstr.length;
+        let u8arr = new Uint8Array(n);
+        while(n--) { u8arr[n] = bstr.charCodeAt(n); }
+        let blob = new Blob([u8arr], {type: mime});
+        let blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+      } catch(e) {
+        alert("Impossibile aprire il file.");
       }
     }
 
-    // Condivisione nativa reale tramite il selettore del telefono (Funziona perfettamente con WhatsApp e Email)
-    async function condividiFileNativo(f) {
+    // Condivisione nativa diretta: apre il menu del telefono con WhatsApp, Gmail, ecc.
+    async function condividiNativo(f) {
       try {
         let blob, nomeFile;
         if (f.isFoto) {
@@ -488,50 +483,12 @@
             files: [fileToShare]
           });
         } else {
-          // Fallback se la condivisione file diretta non è supportata dal browser
-          scaricaFileLocale(f);
-          alert("File scaricato nella cartella Download! Ora puoi allegarlo dove preferisci.");
+          alert("La condivisione diretta dei file non è supportata da questo browser. Usa il backup email generale.");
         }
       } catch (err) {
         if (err.name !== 'AbortError') {
-          scaricaFileLocale(f);
-          alert("Condivisione non completata. Il file è stato salvato nella cartella Download.");
+          alert("Errore durante la condivisione.");
         }
-      }
-    }
-
-    function scaricaFileLocale(f) {
-      try {
-        let blob, nomeScaricato;
-        if (f.isFoto) {
-          const { jsPDF } = window.jspdf;
-          const pdf = new jsPDF();
-          pdf.setFontSize(12);
-          pdf.text(`DocCantiere - Foto: ${f.nome}`, 10, 10);
-          pdf.text(`Data caricamento: ${f.data}`, 10, 16);
-          pdf.addImage(f.dataUrl, 'JPEG', 10, 22, 190, 0);
-          blob = pdf.output('blob');
-          nomeScaricato = f.nome.replace(/\.[^/.]+$/, "") + ".pdf";
-        } else {
-          let arr = f.dataUrl.split(',');
-          let mime = arr[0].match(/:(.*?);/)[1];
-          let bstr = atob(arr[1]);
-          let n = bstr.length;
-          let u8arr = new Uint8Array(n);
-          while(n--) { u8arr[n] = bstr.charCodeAt(n); }
-          blob = new Blob([u8arr], {type: mime});
-          nomeScaricato = f.nome;
-        }
-
-        let blobUrl = URL.createObjectURL(blob);
-        let a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = nomeScaricato;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      } catch(e) {
-        alert("Errore nel salvataggio del file.");
       }
     }
 
@@ -641,8 +598,7 @@
                     ${f.isFoto ? `<img src="${f.dataUrl}" class="img-preview" onclick='apriFile(${JSON.stringify(f)})'>` : ''}
                     <div class="file-date">📅 Caricato: ${f.data}</div>
                     <div class="file-actions">
-                      <button class="btn-action btn-whatsapp" onclick='condividiFileNativo(${JSON.stringify(f)})'>💬 Condividi</button>
-                      <button class="btn-action btn-email" onclick='condividiFileNativo(${JSON.stringify(f)})'>✉️ Invia</button>
+                      <button class="btn-action btn-share" onclick='condividiNativo(${JSON.stringify(f)})'>📲 Condividi su WhatsApp / Email</button>
                     </div>
                   </div>
                 `).join('')}
